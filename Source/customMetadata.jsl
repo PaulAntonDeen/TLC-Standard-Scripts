@@ -2,9 +2,9 @@
 
 Associative Array(
 	List(
-		List( "addinVersion", 2208111527 ),
+		List( "addinVersion", 2208111555 ),
 		List( "author", "" ),
-		List( "buildDate", 3743076619 ),
+		List( "buildDate", 3743078587 ),
 		List( "deployedAddinsFilename", "publishedAddins.jsl" ),
 		List( "deployedAddinsLoc", "" ),
 		List( "id", "com.tlc.standardscripts" ),

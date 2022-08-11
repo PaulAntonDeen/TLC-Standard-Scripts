@@ -14,68 +14,68 @@
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\POV MSA.jsl</jm:action>
             <jm:accel>Ctrl+Alt+Shift+P</jm:accel>
             <jm:tip>Partition of variation and measurement systems analysis</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">RowState</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>CRITICAL PROCESS PARAMETERS</jm:name>
             <jm:caption>Critical process parameters</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\CPP.jsl</jm:action>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">Survival</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>EDGE OF FAILURE</jm:name>
             <jm:caption>Edge of failure</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Edge of failure.jsl</jm:action>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">ManageSpecLimits</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>GRUBBS OUTLIER TEST</jm:name>
             <jm:caption>Grubbs Outlier test</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Grubbs Outlier Test 2.jsl</jm:action>
             <jm:tip>Analyse data for potential outliers</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">MultiFactorAnalysis</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>MOVING AVERAGE SMOOTHER</jm:name>
             <jm:caption>Moving average smoother</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\2018-11-05 Moving averagesdcv smoother.jsl</jm:action>
             <jm:tip>Create a moving average</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">Nonlinear</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>MULTIPLE DISTRIBUTIONS</jm:name>
             <jm:caption>Multiple distributions</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Multiple Distributions.jsl</jm:action>
             <jm:tip>Creates 1 distribution report with multiple distributions in it</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">Distrib</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>NON-NORMAL CONTROL CHART</jm:name>
             <jm:caption>Non-normal control chart</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\NonNormalCC.jsl</jm:action>
             <jm:tip>Creates control chart for minimize</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">ProcessScreening</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>SNIPER PLOT</jm:name>
             <jm:caption>Sniper plot</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Sniper Plot.jsl</jm:action>
             <jm:tip>Retarget process</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">ItemAnalysis</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>TIME BUCKET</jm:name>
             <jm:caption>Time bucket</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Timebucket.jsl</jm:action>
             <jm:tip>Change time into bucketized quantity for joining</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">Calendar</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>WAFER MAPS</jm:name>
             <jm:caption>Wafer maps</jm:caption>
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Wafer maps.jsl</jm:action>
             <jm:tip>Creates wafer maps</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">FactorAnalysis</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>DEFAULT JMP PREFERENCES</jm:name>
@@ -100,14 +100,38 @@
 	)
 );</jm:action>
             <jm:tip>Standard preferences</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">ScriptingIndexAll</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>CHECK FOR UPDATE</jm:name>
             <jm:caption>Check for update</jm:caption>
-            <jm:action type="text">CheckUpdate = Function({AddinID, Repo}, {Default Local},	AvailableVersion = Try(		Parse(Load Text File(Repo || &quot;version.txt&quot;)),		New window(&quot;Error&quot;,&lt;&lt;modal,Text Box(&quot;Could not find file version file&quot;));		Stop();	);	CurrentVersion = Get Addin(AddinID) &lt;&lt; version;	If(AvailableVersion &gt; CurrentVersion,		Write(&quot;Updating &quot; || AddinID || &quot; from &quot; || char(CurrentVersion) || &quot; to &quot; || char(AvailableVersion));		Save Text File(			&quot;$TEMP/latest.jmpaddin&quot;,			Try(				Load Text File(Repo || &quot;latest.jmpaddin&quot;, blob),				New window(&quot;Error&quot;,&lt;&lt;modal,Text Box(&quot;Could not find file .jmpaddin file&quot;));				Stop();			);		);		Try(Open(&quot;$TEMP/latest.jmpaddin&quot;));		Try(Delete file(&quot;$TEMP/latest.jmpaddin&quot;));		New window(&quot;Result&quot;,&lt;&lt;modal,Text Box(AddinID || &quot; version &quot; || char(Get Addin(AddinID) &lt;&lt; version) || &quot; now installed&quot;));	,		New window(&quot;Result&quot;,&lt;&lt;modal,Text Box(char(CurrentVersion) || &quot; is the newest version of &quot; || AddinID));	););CheckUpdate(&quot;com.tlc.standardscripts&quot;, &quot;https://raw.githubusercontent.com/PaulAntonDeen/TLC-Standard-Scripts/main/&quot;);</jm:action>
+            <jm:action type="text">CheckUpdate = Function({AddinID, Repo}, {Default Local},
+	AvailableVersion = Try(
+		Parse(Load Text File(Repo || "version.txt")),
+		New window("Error",&lt;&lt;modal,Text Box("Could not find file version file"));
+		Stop();
+	);
+	CurrentVersion = Get Addin(AddinID) &lt;&lt; version;
+	If(AvailableVersion &gt; CurrentVersion,
+		Write("Updating " || AddinID || " from " || char(CurrentVersion) || " to " || char(AvailableVersion));
+		Save Text File(
+			"$TEMP/latest.jmpaddin",
+			Try(
+				Load Text File(Repo || "latest.jmpaddin", blob),
+				New window("Error",&lt;&lt;modal,Text Box("Could not find file .jmpaddin file"));
+				Stop();
+			);
+		);
+		Try(Open("$TEMP/latest.jmpaddin"));
+		Try(Delete file("$TEMP/latest.jmpaddin"));
+		New window("Result",&lt;&lt;modal,Text Box(AddinID || " version " || char(Get Addin(AddinID) &lt;&lt; version) || " now installed"));
+	,
+		New window("Result",&lt;&lt;modal,Text Box(char(CurrentVersion) || " is the newest version of " || AddinID));
+	);
+);
+CheckUpdate("com.tlc.standardscripts", "https://raw.githubusercontent.com/PaulAntonDeen/TLC-Standard-Scripts/main/");</jm:action>
             <jm:tip>Checks and installs the latest version of this Add-in</jm:tip>
-            <jm:icon type="none"></jm:icon>
+            <jm:icon type="builtin">Refresh</jm:icon>
           </jm:command>
         </jm:menu>
         <jm:menu>
