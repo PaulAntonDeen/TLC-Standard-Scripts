@@ -1,0 +1,257 @@
+﻿Names default to here(1);
+
+dt = current data table();
+FirstResponse = .;
+NrOfResponse=0;
+
+//Test for Y in spec column
+try(
+	type(Column("Y In Spec")),
+	new window("Error", <<modal, text box("No Y in Spec column found, cannot do Edge of failure graph without spec limits."));
+	stop();
+);
+
+For(i=1,i<=N cols(dt),i++,
+	speclimitvals = Char( column(dt,i) << get property( "spec limits" ) );
+	if(speclimitvals!="Empty()",
+	//We are at a response column
+		if(is missing(FirstResponse),FirstResponse=i,);
+		NrOfResponse++;
+		If(Contains( speclimitvals, "LSL(" )>0,LSL = Try( Num( Word( 2, Substr( speclimitvals, Contains( speclimitvals, "LSL(" ) ), "()" ) ), . ),LSL=.);
+		If(Contains( speclimitvals, "USL(" )>0,USL = Try( Num( Word( 2, Substr( speclimitvals, Contains( speclimitvals, "USL(" ) ), "()" ) ), . ),USL=.);
+		If(Contains( speclimitvals, "Target(" )>0,Target = Try( Num( Word( 2, Substr( speclimitvals, Contains( speclimitvals, "Target(" ) ), "()" ) ), . ),Target=.);
+		Eval(
+			Substitute(
+					Expr(
+						Column( dt, i ) << Set Property( "Spec Limits", {LSL( __LSL__ ), USL( __USL__ ), Target( __Target__ ), Show Limits( 1 )} )
+					),
+				Expr( __LSL__ ), LSL,
+				Expr( __USL__ ), USL,
+				Expr( __Target__ ), Target
+			)
+		);
+	);
+);
+
+XCols = YCols = {};
+AllColumns = dt << Get Column Names(string);
+
+//Remove Obj and Y in Spec
+Remove from(AllColumns, Loc(AllColumns,"Obj")[1], n items(AllColumns)-Loc(AllColumns,"Obj")[1]+1);
+
+For(i=FirstResponse+NrOfResponse-1,i>0,i--,
+	If(i<FirstResponse,
+		InsertInto(XCols,Column(i))
+	,
+		InsertInto(YCols,Column(i))
+	);
+	Remove from(AllColumns,i)
+);
+reverse into(XCols);
+reverse into(YCols);
+If(n items(AllColumns)>0,
+	New Window( "Edge of failure",
+		<<Modal,
+		Border Box( Left( 3 ), top( 2 ),
+			ModalWindowDialog = H List Box(
+				V List Box(
+					Text Box( "This script needs some clarification:" ),
+					Text box( "Not all columns are used as a factor or a response, where should the remaining columns be used?", << set wrap(700) ),
+					Text box( "A likely cause if that some response columns do not have spec limits", << set wrap(700)),
+					Text Box( " " ),
+					Lineup Box( N Col( 4 ),
+						Text Box( "Factors (X)" ),
+						XColBox = List Box( XCols, ),
+						Button box("To response",YColBox << append(XColBox << Get Selected);XColBox << Remove Selected),
+						Button box("Don't use",UnusedColBox << append(XColBox << Get Selected);XColBox << Remove Selected),
+						Text Box( "Responses (Y)" ),
+						YColBox = List Box( YCols, ),
+						Button box("To factor",XColBox << append(YColBox << Get Selected);YColBox << Remove Selected),
+						Button box("Don't use",UnusedColBox << append(YColBox << Get Selected);YColBox << Remove Selected),
+						Text Box( "Unused Columns" ),
+						UnusedColBox = List Box( AllColumns, ),
+						Button box("To factor",XColBox << append(UnusedColBox << Get Selected);UnusedColBox << Remove Selected),
+						Button box("To response",YColBox << append(UnusedColBox << Get Selected);UnusedColBox << Remove Selected),
+					),
+					h center box(
+						Button Box( "    OK    ",
+							XCols = XColBox << Get items();
+							YCols = YColBox << Get items();
+						)
+					),
+				)
+			)
+		)
+	)
+);
+
+column("Y In Spec") << set Property( "Value Colors", {0 = -13912408, 1 = 4} );
+column("Y In Spec") << Color Cell by Value( 1 );
+dt << color or mark by column("Y In Spec");
+
+//Create scaterplot graph
+Eval(
+	Substitute(
+		Expr(
+			vlb = V list box(
+				SM = dt << Scatterplot Matrix(
+					Y( __YCOL__ ),
+					X( __XCOL__	),
+					Matrix Format( "Lower Triangular" ),
+					Ellipse Color( 3 ),
+					Fit Line( 0 ),
+					Local Data Filter(
+						Add Filter(
+							columns(
+								__XCOL__
+							),
+						)
+					),
+				)
+			)
+		),
+		Expr(__YCOL__), YCols,
+		Expr(__XCOL__), XCols
+	)
+);
+SM << Automatic Recalc(1);
+
+
+XColExp = arg(SM << get script, 2);
+ColExp = expr(columns(  ));
+
+//Create output window and embed scatterplot
+nw = new window("Edge of Failure",vlb);
+vlb << append(
+	Border Box( Left(14), Top(10), Bottom(10),
+		Button box("Operating ranges to table",
+			try(Close(dtOR, no save));
+			FilterBoxes = nw << xpath("//OutlineBox[contains(text(),'Local Data Filter')]//LineUpRulerBox//TabPageBox");
+			FactorNames = (nw << xpath("//OutlineBox[contains(text(),'Local Data Filter')]//LineUpRulerBox//TabPageBox")) << get title;
+			AxisNames = (nw << xpath("//AxisBox")) << get text;
+			Remove from(FactorNames, -1, 1);
+			FactorNames = remove(AxisNames, 1, (n items(AxisNames) - n items(FactorNames)));
+
+			dtOR = New Table( "Operating ranges",
+				Add Rows( n items(FactorNames) ),
+				Compress File When Saved( 1 ),
+				New Column( "Factor",
+					Character,
+					"Nominal",
+					Set Values( FactorNames )
+				),
+				New Column( "Categorical Level",
+					Character,
+					"Nominal"
+				),
+				New Column( "LSL",
+					Numeric,
+					"Continuous",
+					Format( "Best", 12 ),
+					Set Values( [] )
+				),
+				New Column( "USL",
+					Numeric,
+					"Continuous",
+					Format( "Best", 12 ),
+					Set Values( [] )
+				)
+			);
+			
+			For(i=1, i<n items(FilterBoxes), i++,
+				If(n items(FilterBoxes[i] << xpath("//ComboBox")) == 0,
+					//Continous
+					Factorlimits = (FilterBoxes[i] << xpath("//NumberEditBox")) << get;
+					dtOR:LSL[i] = Factorlimits[1];
+					dtOR:USL[i] = Factorlimits[2];
+				,
+					//Categorical
+					dtOR:Categorical Level[i] = Column(dt, FactorNames[i])[1];
+				)
+			);
+			nw << journal();
+			dtOR << journal();
+			Close(dtOR, no save);
+		)
+	)
+);
+
+/*
+vlb << append(
+	H center box(
+		H list box(
+			Border box(Left(10), Right(10),
+				Outline Box("Normal Operating Range",
+					Lineup box(Ncol(1),
+						NORtbl = Table box(
+							String Col Box("",{"LSL", "USL"}),
+						),
+							Button box("Write NOR",
+								UpdateLocalDataFilter(NORtbl << Get As Matrix);
+						)
+					)
+				)
+			)
+		,
+			Border box(Left(10), Right(20),
+				Outline Box("Proven Acceptable Range",
+					Lineup box(Ncol(1),
+						PARtbl = Table box(
+							String Col Box("",{"LSL", "USL"}),
+						),
+						Button box("Write PAR",
+							UpdateLocalDataFilter(PARtbl << Get As Matrix);
+						)
+					)
+				)
+			)
+		)
+	)
+);
+
+//Fill NOR and PAR table with boxes to enter values
+For(i=1, i<=n arg(XColExp), i++,
+	If(arg(XColExp, i) << Get Modeling Type == "Continuous",
+		NORtbl << append(Number Col Edit Box(arg(XColExp, i) << get name,{.,.}));
+		PARtbl << append(Number Col Edit Box(arg(XColExp, i) << get name,{.,.}));
+	,
+	//Categorical
+		NORtbl << append(Number Col Box(arg(XColExp, i) << get name,{.,.}));
+		PARtbl << append(Number Col Box(arg(XColExp, i) << get name,{.,.}));
+	);
+	Insert into(ColExp, arg(XColExp, i));
+);
+
+UpdateLocalDataFilter = function({Values}, {},
+	FilterExp = Insert(
+		expr(Add filter()),
+		name expr(ColExp)
+	);
+	For(i=1, i<=n arg(ColExp), i++,
+		If(arg(ColExp, i) << Get Modeling Type == "Continuous",
+			If(is missing(Values[i]), Values[i] = eval(eval expr(col min(expr(arg(ColExp, i)))))); //Set low end to col min if missing
+			If(is missing(Values[i + n arg(ColExp)]), Values[i + n arg(ColExp)] = eval(eval expr(col max(expr(arg(ColExp, i)))))); //Set high end to col max if missing
+			insert into(FilterExp, insert(expr(Where()), eval expr(expr(arg(ColExp, i)) >= expr(Values[i]) & expr(arg(ColExp, i)) <= expr(Values[i + n arg(ColExp)]))))
+		,
+		//Categorical, don't do anything
+		);
+	);
+
+	SM << Remove Local Data Filter; //Destroy the current one and add a new filter
+	Eval(
+		Insert(
+			Expr( Send( SM ) ),
+			Insert(
+				Expr( Local Data Filter() ), 
+				name expr(FilterExp)
+			)
+		)
+	);
+);
+*/
+
+//Rescale graphs
+XContentSize = (nw << get size())[1];
+XWindowSize = (nw << Get Window Size)[1];
+FBSize = Report(sm)[FrameBox(1)] << get size(1);
+sm << SendToReport(Dispatch( {}, "Scatterplot Matrix Plot", FrameBox, {Frame Size( FBSize[1]*XWindowSize/XContentSize, FBSize[2] )} ));

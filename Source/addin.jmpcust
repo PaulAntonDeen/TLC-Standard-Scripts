@@ -1,0 +1,284 @@
+<!-- JMP Add-In Builder created --><jm:menu_and_toolbar_customizations xmlns:jm="http://www.jmp.com/ns/menu" version="3">
+  <jm:insert_in_main_menu>
+    <jm:insert_after>
+      <jm:name></jm:name>
+      <jm:menu>
+        <jm:name>TLC</jm:name>
+        <jm:caption>TLC</jm:caption>
+        <jm:menu>
+          <jm:name>SCRIPTS</jm:name>
+          <jm:caption>Scripts</jm:caption>
+          <jm:command>
+            <jm:name>POV AND MSA ENGINE</jm:name>
+            <jm:caption>POV and MSA Engine</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\POV MSA.jsl</jm:action>
+            <jm:accel>Ctrl+Alt+Shift+P</jm:accel>
+            <jm:tip>Partition of variation and measurement systems analysis</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>CRITICAL PROCESS PARAMETERS</jm:name>
+            <jm:caption>Critical process parameters</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\CPP.jsl</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>EDGE OF FAILURE</jm:name>
+            <jm:caption>Edge of failure</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Edge of failure.jsl</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>GRUBBS OUTLIER TEST</jm:name>
+            <jm:caption>Grubbs Outlier test</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Grubbs Outlier Test 2.jsl</jm:action>
+            <jm:tip>Analyse data for potential outliers</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>MOVING AVERAGE SMOOTHER</jm:name>
+            <jm:caption>Moving average smoother</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\2018-11-05 Moving averagesdcv smoother.jsl</jm:action>
+            <jm:tip>Create a moving average</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>MULTIPLE DISTRIBUTIONS</jm:name>
+            <jm:caption>Multiple distributions</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Multiple Distributions.jsl</jm:action>
+            <jm:tip>Creates 1 distribution report with multiple distributions in it</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>NON-NORMAL CONTROL CHART</jm:name>
+            <jm:caption>Non-normal control chart</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\NonNormalCC.jsl</jm:action>
+            <jm:tip>Creates control chart for minimize</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>SNIPER PLOT</jm:name>
+            <jm:caption>Sniper plot</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Sniper Plot.jsl</jm:action>
+            <jm:tip>Retarget process</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>TIME BUCKET</jm:name>
+            <jm:caption>Time bucket</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Timebucket.jsl</jm:action>
+            <jm:tip>Change time into bucketized quantity for joining</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>WAFER MAPS</jm:name>
+            <jm:caption>Wafer maps</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\Wafer maps.jsl</jm:action>
+            <jm:tip>Creates wafer maps</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>DEFAULT JMP PREFERENCES</jm:name>
+            <jm:caption>Default JMP preferences</jm:caption>
+            <jm:action type="text">If(Host is(windows),
+	Match(
+		word(1,JMP Version(),".")
+		,"16",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v16.jsl")
+		,"15",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v15.jsl")
+		,"14",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v14.jsl")
+		,"13",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v13.jsl")
+		,new window(&lt;&lt;modal,"Version error",Text box("JMP for windows version " || jmp version() || " unknown, please update addin."))
+	)
+	,
+	Match(
+		word(1,JMP Version(),".")
+		,"16",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v16.jsl")
+		,"15",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v15.jsl")
+		,"14",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v14.jsl")
+		,"13",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v13.jsl")
+		,new window(&lt;&lt;modal,"Version error",Text box("JMP for OSX version " || jmp version() || " unknown, please update addin."))
+	)
+);</jm:action>
+            <jm:tip>Standard preferences</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>CHECK FOR UPDATE</jm:name>
+            <jm:caption>Check for update</jm:caption>
+            <jm:action type="text">CheckUpdate = Function({AddinID, Repo}, {Default Local},	AvailableVersion = Try(		Parse(Load Text File(Repo || &quot;version.txt&quot;)),		New window(&quot;Error&quot;,&lt;&lt;modal,Text Box(&quot;Could not find file version file&quot;));		Stop();	);	CurrentVersion = Get Addin(AddinID) &lt;&lt; version;	If(AvailableVersion &gt; CurrentVersion,		Write(&quot;Updating &quot; || AddinID || &quot; from &quot; || char(CurrentVersion) || &quot; to &quot; || char(AvailableVersion));		Save Text File(			&quot;$TEMP/latest.jmpaddin&quot;,			Try(				Load Text File(Repo || &quot;latest.jmpaddin&quot;, blob),				New window(&quot;Error&quot;,&lt;&lt;modal,Text Box(&quot;Could not find file .jmpaddin file&quot;));				Stop();			);		);		Try(Open(&quot;$TEMP/latest.jmpaddin&quot;));		Try(Delete file(&quot;$TEMP/latest.jmpaddin&quot;));		New window(&quot;Result&quot;,&lt;&lt;modal,Text Box(AddinID || &quot; version &quot; || char(Get Addin(AddinID) &lt;&lt; version) || &quot; now installed&quot;));	,		New window(&quot;Result&quot;,&lt;&lt;modal,Text Box(char(CurrentVersion) || &quot; is the newest version of &quot; || AddinID));	););CheckUpdate(&quot;com.tlc.standardscripts&quot;, &quot;https://raw.githubusercontent.com/PaulAntonDeen/TLC-Standard-Scripts/main/&quot;);</jm:action>
+            <jm:tip>Checks and installs the latest version of this Add-in</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+        </jm:menu>
+        <jm:menu>
+          <jm:name>FILES</jm:name>
+          <jm:caption>Files</jm:caption>
+          <jm:command>
+            <jm:name>CAPABILITY QUANTILES COMPARISON WITH TI AND RISK</jm:name>
+            <jm:caption>Capability Quantiles Comparison with TI and Risk</jm:caption>
+            <jm:action type="text">Open("$ADDIN_HOME(com.tlc.standardscripts)/Extra files/Capability Quantiles Comparison with TI and Risk.jmp")</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>CQAS SCORECARD AND METROLOGY CAPABILITY AND CHECKLIST</jm:name>
+            <jm:caption>CQAs Scorecard and Metrology Capability and Checklist</jm:caption>
+            <jm:action type="text">FileName = "Rev 3.0 CQAs Scorecard and Metrology Capability and Checklist.xltx";
+AddinSourceLocation = "$ADDIN_HOME(com.tlc.standardscripts)/Worksheets/";
+
+if(Host is(windows),
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,windows);
+	RunProgram(
+		Executable( "CMD.EXE" ),
+		Options( {"/c start \!"\!" \!"" || filepath || "\!""} ) // - /c start "" "/local/file/path"
+	)
+,
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,posix);
+	RunProgram(
+		Executable( "/usr/bin/open" ),
+		Options( filepath ),
+		ReadFunction( "text" )
+	)
+);</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>K VALUE CALCULATOR</jm:name>
+            <jm:caption>K value calculator</jm:caption>
+            <jm:action type="text">Open("$ADDIN_HOME(com.tlc.standardscripts)/Extra files/K Value Calculator.jmp")</jm:action>
+            <jm:tip>Open the K value small sample size calculator</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>LOW LEVEL RISK ASSESSMENT</jm:name>
+            <jm:caption>Low Level Risk Assessment</jm:caption>
+            <jm:action type="text">FileName = "Low Level Risk Assessment V14.xltx";
+AddinSourceLocation = "$ADDIN_HOME(com.tlc.standardscripts)/Worksheets/";
+
+if(Host is(windows),
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,windows);
+	RunProgram(
+		Executable( "CMD.EXE" ),
+		Options( {"/c start \!"\!" \!"" || filepath || "\!""} ) // - /c start "" "/local/file/path"
+	)
+,
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,posix);
+	RunProgram(
+		Executable( "/usr/bin/open" ),
+		Options( filepath ),
+		ReadFunction( "text" )
+	)
+);
+</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>METHOD VALIDATION QUICK REFERENCE GUIDE</jm:name>
+            <jm:caption>Method Validation Quick Reference Guide</jm:caption>
+            <jm:action type="text">FileName = "Method Validation Quick Reference Guide 6.0 TLC.xltx";
+AddinSourceLocation = "$ADDIN_HOME(com.tlc.standardscripts)/Worksheets/";
+
+if(Host is(windows),
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,windows);
+	RunProgram(
+		Executable( "CMD.EXE" ),
+		Options( {"/c start \!"\!" \!"" || filepath || "\!""} ) // - /c start "" "/local/file/path"
+	)
+,
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,posix);
+	RunProgram(
+		Executable( "/usr/bin/open" ),
+		Options( filepath ),
+		ReadFunction( "text" )
+	)
+);
+</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>MTBF TEST SAMPLE SIZE</jm:name>
+            <jm:caption>MTBF Test Sample Size</jm:caption>
+            <jm:action type="text">Open("$ADDIN_HOME(com.asm.standardscripts)/Extra files/MTBF Test Sample Size.jmp")</jm:action>
+            <jm:tip>Calculate test time to prove MTBF</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>QUALITY RISK MANAGEMENT TEMPLATES</jm:name>
+            <jm:caption>Quality Risk Management Templates</jm:caption>
+            <jm:action type="text">FileName = "Quality Risk Management Templates  2018.xltx";
+AddinSourceLocation = "$ADDIN_HOME(com.tlc.standardscripts)/Worksheets/";
+
+if(Host is(windows),
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,windows);
+	RunProgram(
+		Executable( "CMD.EXE" ),
+		Options( {"/c start \!"\!" \!"" || filepath || "\!""} ) // - /c start "" "/local/file/path"
+	)
+,
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,posix);
+	RunProgram(
+		Executable( "/usr/bin/open" ),
+		Options( filepath ),
+		ReadFunction( "text" )
+	)
+);
+</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>SAMPLE SIZE CALCULATOR</jm:name>
+            <jm:caption>Sample Size Calculator</jm:caption>
+            <jm:action type="text">FileName = "Sample Size Calculator 1.4.xltx";
+AddinSourceLocation = "$ADDIN_HOME(com.tlc.standardscripts)/Worksheets/";
+
+if(Host is(windows),
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,windows);
+	RunProgram(
+		Executable( "CMD.EXE" ),
+		Options( {"/c start \!"\!" \!"" || filepath || "\!""} ) // - /c start "" "/local/file/path"
+	)
+,
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,posix);
+	RunProgram(
+		Executable( "/usr/bin/open" ),
+		Options( filepath ),
+		ReadFunction( "text" )
+	)
+);
+</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>SAMPLING PLAN WORKSHEET</jm:name>
+            <jm:caption>Sampling Plan Worksheet</jm:caption>
+            <jm:action type="text">FileName = "Sampling Plan Worksheet.xltx";
+AddinSourceLocation = "$ADDIN_HOME(com.tlc.standardscripts)/Worksheets/";
+
+if(Host is(windows),
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,windows);
+	RunProgram(
+		Executable( "CMD.EXE" ),
+		Options( {"/c start \!"\!" \!"" || filepath || "\!""} ) // - /c start "" "/local/file/path"
+	)
+,
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,posix);
+	RunProgram(
+		Executable( "/usr/bin/open" ),
+		Options( filepath ),
+		ReadFunction( "text" )
+	)
+);
+</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>HARVEST PREFERENCE FILE</jm:name>
+            <jm:caption>Harvest preference file</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Extra files\Harvest preferences.jsl</jm:action>
+            <jm:tip>Creates a set preference script from the currently defined preferences</jm:tip>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+        </jm:menu>
+      </jm:menu>
+    </jm:insert_after>
+  </jm:insert_in_main_menu>
+</jm:menu_and_toolbar_customizations>

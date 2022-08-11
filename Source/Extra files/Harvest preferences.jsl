@@ -1,0 +1,7 @@
+TempPrefs = Load Text File( "$USER_APPDATA/JMP.PFS" );
+Substitute Into( TempPrefs, "Preferences(", "Set Preferences(" );
+Substitute Into( TempPrefs, "Platform Set Preferences(", "Set Platform Preferences(" );
+New Window( "Preference harvester result",
+	<<Script,
+	Concat( TempPrefs, "New window(\!"Success\!",<<Modal,Text box(\!"JMP ", JMP Version(), " settings applied successfully\!"));" )
+);

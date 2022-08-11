@@ -1,0 +1,316 @@
+/*************************
+Coding by Paul Deen
+Script owner gido.van.der.star@asm.com
+*************************/
+
+Names Default To Here( 1 );
+If( !Namespace Exists( "PeakFitter" ),nsref = New Namespace("PeakFitter"));
+
+// Check for an active table, if not present open dialog.
+dt = If( N Rows() > 0,
+	dt = Current Data Table(),
+	dt = Open()
+);
+// Clear selections
+dt << Clear Select;
+dt << Clear Column Selection;
+
+//Main dialog definition
+nw = New Window( "Peak fitter",
+	Border Box( Left( 3 ), top( 2 ),
+		Panel Box("Peak fitter",
+			H List Box(
+				Panel Box( "Select Columns", colListData = Filter Col Selector( All, width( 253 ), grouped, nLines( Min( N Col( dt ), 10 ) ) ) ),
+				Panel Box( "Cast Selected Columns into Roles",
+					Lineup Box( N Col( 2 ), Spacing( 3 ),
+						Button Box( "Y, Response", colListYbox << Append( colListData << GetSelected ) ),
+						colListYbox = Col List Box( width( 200 ), nLines( 1 ), numeric, MinItems( 1 ), MaxItems( 1 ) ),
+						Button Box( "X, Factor", colListXbox << Append( colListData << GetSelected ) ),
+						colListXbox = Col List Box( width( 200 ), nLines( 1 ), numeric, MinItems( 1 ), MaxItems( 1 ) ),
+						Spacer Box( Size( 1, 1 ) )
+					)
+				),
+				Panel Box( "Action",
+					Lineup Box( N Col( 1 ),
+						Button Box( "OK",
+							PeakFitter:YColRecall = colListY = colListYbox << Get Items;
+							PeakFitter:XColRecall = colListX = colListXbox << Get Items;
+							nw << close window(1);
+							BuildPeakSelectionGraphWindow;
+							
+						),
+						Button Box( "Cancel",
+							Print( "User hit cancel" );
+							nw << close window(1);
+						),
+						Text Box( " " ),
+						Button Box( "Recall",
+							Try(
+								colListYbox << set items( PeakFitter:YColRecall );
+								colListXbox << set items( PeakFitter:XColRecall );
+							)
+						),
+					)
+				)
+			)
+		),
+	)
+);
+
+BuildFunctionColumnForNonLinear = Expr(
+	// Set the background parameters and equation
+	Match(Background,
+		"No background",
+			params = {};		
+			formula = Eval Insert("0");
+		,
+		"Constant background",
+			params = {bgC = 0};		
+			formula = Eval Insert("bgC");
+		,
+		"Linear background",
+			params = {bgC = 0, bgA = 0};		
+			formula = Eval Insert("bgC + bgA * :Name( \!"^Char(colListX[1])^ \!")");
+		,
+		"Exponential decay background",
+			// define background parameters and part of formula
+			params = {bgC = 5, bgA = 500, bgdT = 0.15};		
+			formula = Eval Insert("bgC + bgA * Exp( -bgdT * :Name( \!"^Char(colListX[1])^ \!"))");
+	);
+	
+	// Generate parameters and formula for peaks in positions list
+	Match(FitType,
+		"Lorentzian peaks",
+			For( i = 1, i <= N Items( XList ), i++,
+				i_positions = XList[i];
+				i_peaks = YList[i];
+				Concat To( params, Eval( Parse( Eval Insert( " { P^i^_FWHM = 1, P^i^_pos0 = ^i_positions^, P^i^_amp = ^i_peaks^ } " ) ) ) );
+				Concat To( formula, " + " );
+				Concat To(
+					formula,
+					Eval Insert( " 
+						(P$i$_amp / Pi()) * ((P$i$_FWHM / 2) / ((:Name( \!"$Char(colListX[1])$ \!") - P$i$_pos0) ^ 2 + (P$i$_FWHM / 2) ^ 2)) 
+					", "$" )
+				);
+			);
+		,
+		"Gaussian peaks",
+			For( i = 1, i <= N Items( XList ), i++,
+				i_positions = XList[i];
+				i_peaks = YList[i];
+				Concat To( params, Eval( Parse( Eval Insert( " { P^i^_sigma = 1, P^i^_mu = ^i_positions^, P^i^_amp = ^i_peaks^*sqrt(2*pi()) } " ) ) ) );
+				Concat To( formula, " + " );
+				Concat To(
+					formula,
+					Eval Insert( " 
+						( P$i$_amp/( P$i$_sigma * sqrt(2*Pi()) ) * Exp ( -1/2*( (:Name(\!"$Char(colListX[1])$ \!")-P$i$_mu) / P$i$_sigma )^2 ) )
+					", "$" )
+				);
+			);
+	);
+
+	FitColName = "Fit formula - Y: " || Char(ColListY[1]) || " - X: " || Char(ColListX[1]);
+	
+	//If the formula column already exists, remove column
+	If(!Is Missing( Is Scriptable( Try( Column( FitColName ) ) )),
+		dt << Delete Columns(FitColName)
+	);
+	
+	//Create new column with equation
+	Eval(
+		Substitute(
+				Expr(
+					dt << New Column( FitColName , Numeric, "Continuous", Format( "Best", 12 ), Formula( Parameter( _params, _formula ) ) )
+				),
+			Expr( _params ), params,
+			Expr( _formula ), Parse( formula )
+		)
+	);
+	Biv << close window();
+	nw << Close window();
+	NL = dt << Nonlinear(
+		Y( Column(ColListY) ),
+		X( Column(FitColName) ),
+		Newton,
+		SendToReport(
+			Dispatch( {"Plot"}, "Nonlinear Graph", FrameBox, {Transparency( 0.2 )} )
+		)
+	);
+	NL << go();
+);
+
+MathematicalBackgroundDescription = Expr(
+	V list box(
+		Outline Box( "Peak fit options",
+			Table Box(
+				String Col Box( "Fit",
+					{"Background fitting", "No background", "Constant background", "Linear background",
+					"Exponential decay background", "", "Peak fitting", "Lorentzian peaks", "Gaussian peaks"}
+				),
+				String Col Box( "Function",
+					{"A single background can be chosen", "0", "c", "c + a*X", "c + a*Exp^(-t*X)", "",
+					"A single peak type can be chosen. The algorithm will fit a sum of peaks, with initial values chosen by clicks in a graph.",
+					"amp/Pi * ((FWHM/2) / ( (X-pos0)^2 + (FWHM/2)^2) )",
+					"amp/( sigma*sqrt(2*Pi) ) * Exp( -1/2*( ((X-mu)/sigma)^2 ) )"}
+				),
+				String Col Box( "Fit parameters (start values)",
+					{"", "None", "bgC (0)", "bgC (0); bgA (0)", "bgC (5); bgA (500); bgdT (0.15)", "",
+					"separate parameters for each peak i = 1 to n",
+					"Pi_FWHM (1), Pi_pos0 (click), Pi_amp (click)",
+					"Pi_sigma (1), Pi_mu (click), Pi_amp ( click*sqrt(2*pi) )"}
+				)
+			)
+		),
+		Outline Box( "Fit formulas",
+			H List Box(
+				Outline Box("Backgrounds",
+					V list box(
+						Outline Box( "No background",
+							Picture Box(
+								New Image(
+									Char To Blob(
+										"1iVBORw0KGgoAAAANSUhEUgAAABgAAAAnCAIAAACaOR/XAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTZEaa/1AAAAmklEQVRIS+3Ryw2AIBBFUZqzIKqhFkuhE3f4xqcJnwFNZOGHuwKSOZmoCZ0SaLkRFTSgalTQgKpRQb+DvJsMm5zf3/SoIAUS5ZifrTF23o56VFAJpbOxqkUFFZBMxjvk9ywqqICwULLByUpU0Augbt8oW+nEaUHb/z8oObecJoRknjUVRAXp0PWooAFVo4IGVI0K+jjUpadBIaxUe2gNMAn4uQAAAABJRU5ErkJggg==",
+										"base64compressed"
+									),
+									"png"
+								)
+							)
+						),
+						Outline Box( "Constant background",
+							Picture Box(
+								New Image(
+									Char To Blob(
+										"1iVBORw0KGgoAAAANSUhEUgAAACsAAAAnCAIAAAAZ/SbsAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTZEaa/1AAABA0lEQVRYR+2UyxGDMAxEaY6CXA21uBQ6yc3RSv5ifgIm5KB3imSjfdhMhvA2MPi8gcQTZmAGwAzMAJjBfxrM0ziM0xwrLd4NFc7Hdo/EE08acHoVOk9ue47EE48ZaB+TeGLToBxnO7f0naffaRHtnTPvkXhi3YDnV2UqkJOF2CVW2KUSODSop+XXi6cjXVDOQH0Equ8gN7qYXxrw9B0D7NEpSDxxwiDnLFeaGnrNYwdIPLH1Ja5O5qWmqEOxs5G493/geT6oZ6bc2C+3kGCLzN61SDzRG5wHNrrPr0LiiesGfBqXBS4alCsAiwtQIvHEnVu4hcQTZmAGwAzMAMDgXcwghC9R4zsSbyLTjgAAAABJRU5ErkJggg==",
+										"base64compressed"
+									),
+									"png"
+								)
+							)
+						),
+						Outline Box( "Linear background",
+							Picture Box(
+								New Image(
+									Char To Blob(
+										"4843eJzrDPBz5+WS4mJgYOD19HAJAtJ5QGzOwQQkk3a8mAykGIuD3J0Y1p2TeQnksKQ7+joyMGzs5/6TyArkcxZ4RBYzMPAdAmFGUQ2vBqCgZIlrRElwflpJeWJRKkNBYmZeiV5eaomCiZ6BnqGZS+b6rwwMTLs9XRxDKuLeTtu99ZWBiItmY88EoRVNUyb0KMVwM251YJ/i4CFu/vjsxRPb/rh++hitsln57/mMbu7yz4LaiVr/W5irWIJetso1hlQtdFeYGvdC0GOpONWEelbV3O2b/fitaPXSO6t9nUr7D6v+YDJwzHz4UM37oy2bbdPU0G+f9+RdnVR8J7/SRu60/MVD6qFrZxcCZUxD9W6wfdx49eBSIa5Vu+cGvDHaev2zFa9tk+XUMqmX8272hZdveX1Sxd3MQnmblQ63g0GC5rS9bW83vWXd/VLQZxWP5eS8uxuzTVwPzU06HzZ11pzgSBmFC8s2XFvS+/137c6Yc88/f/7Z4zxxA288/+To3xeUZ4TNzNp4ZKH9ifaZN/KvTTFYvsmkIfHy130HL7VcfpmSv/WmDF+7xZWErVx5Tv0K73dvkpT4kZVvNGNWU7mE6roIMYYbm8rKCry4eTY9ytve7TwxYMGpvdwL3CesN5KxLRaOnhy7X+3i9E0aDj0Xku88ffzxxvvvt99+q9p7bKFDbIVAglQVS6XW7D1/Z/rdXzczcj9bee9avtNMEbu/T2P+vHlJe2p8m9zBM+f9igOqsma8KrnUtG2T8IPb/6caa3Uz92RJy8qoy0xb47v6nEN/wrPgSn7L3neNZ+SPB64PPye0pWYnW9iRsHZVRrUlvjz8HBt3czvPvfe27YKyROjM/tDTnL/u/6hsmBrSlv77qWudHMMFZY1QyUPmNX+/rD9/nvnLQvcHf5jFg3bKfeFYconblmnlF6d+B629F5QneOmTJ2QwNUl0SZHpkiJVu/n1UceT5XXtS58A0zqDp6ufyzqnhCYAUwNznQ==",
+										"base64compressed"
+									),
+									"png"
+								)
+							)
+						),
+						Outline Box( "Exponential decay background",
+							Picture Box(
+								New Image(
+									Char To Blob(
+										"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",
+										"base64compressed"
+									),
+									"png"
+								)
+							)
+						),
+					)
+				),
+				Outline Box("Peak formula",
+					V list box(
+						Outline Box( "Lorentzian peak",
+							V List Box(
+								Text Edit Box( "Sum over all peaks (example for peak 1 only)" ),
+								Picture Box(
+									New Image(
+										Char To Blob(
+											"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",
+											"base64compressed"
+										),
+										"png"
+									)
+								)
+							)
+						),
+						Outline Box( "Gaussian peak",
+							V List Box(
+								Text Edit Box( "Sum over all peaks (example for peak 1 only)" ),
+								Picture Box(
+									New Image(
+										Char To Blob(
+											"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",
+											"base64compressed"
+										),
+										"png"
+									)
+								)
+							)
+						)
+					)
+				)
+			),
+		),
+	);
+);
+
+BuildPeakSelectionGraphWindow = expr(
+	nw = New Window( "Peak fitter",
+		tb = Tab Box(
+			"Fit peaks to data",
+			Eval( Expr( Biv = dt << Bivariate( Y( Column( colListY ) ), X( Column( colListX ) ) ) ) );
+			FRMBX = Report( biv )[FrameBox( 1 )];
+			XList = {};
+			YList = {};
+			ScriptOn = 1;
+
+			FRMBX << Add Graphics Script(
+				Description( "Mousetrapper" ),
+				Mousetrap(
+					//On mouseDown and move
+					If( ScriptOn,
+						Insert Into( XList, x );
+						Insert Into( YList, y );
+						ScriptOn = 0;
+					), 
+					//On mouseUp
+					ScriptOn = 1
+				)
+			);
+
+			FRMBX << Add Graphics Script( Description( "Markers" ), Marker( Marker State( 16 ), Color State( 3 ), Matrix( XList ), Matrix( YList ) ) );
+			Report( Biv ) << prepend( Text Box( "            Click in the graph on the top of each peak that you want to fit.", <<set wrap(1000) ) );
+			Report( Biv ) << Append(
+				Panel Box("Fit formula",
+					H list box(
+						Panel Box( "Formula components",
+							V List Box(
+								BackgroundBox = Radio Box( {"No background", "Constant background", "Linear background", "Exponential decay background"} ),
+								FitTypeBox = Radio Box( {"Lorentzian peaks", "Gaussian peaks"} ), 
+							)
+						),
+						Lineup Box(NCol(1),
+							Button Box( "Fit formula",
+								Background = BackgroundBox << get selected;
+								FitType = FitTypeBox << get selected;
+								If(n items(XList)==0,
+									New window("Error",<<modal,text box("You have not selected any peaks in the graph, make sure you select at least one."))
+								,
+									BuildFunctionColumnForNonLinear
+								);
+							),
+							Button Box( "Start over",
+								XList = {};
+								YList = {};
+								FRMBX << Reshow();
+							)
+						)
+					)
+				)
+			);
+			
+			Try(
+				colListYbox << set items( PeakFitter:YColRecall );
+				colListXbox << set items( PeakFitter:XColRecall );
+			)
+
+		,
+			"Mathematical background of this script",
+			MathematicalBackgroundDescription
+		);
+	);
+);

@@ -1,0 +1,94 @@
+//
+// Sniper Plot T. Little 8/21/2013
+
+
+Clear Globals();
+//Open data table and assign it to dt variable
+activetable1 = N Rows();
+dt = If( activetable1 > 0,
+	Current Data Table(),
+	dt = Open()
+);
+// Get the data requirements from the user
+diadata = Column Dialog(
+	Vlist( "Sniper Plot (c) Thomas A. Little Consulting 2011-2013" ),
+	hlist( " " ),
+	Vlist(
+		"Define Study Options and Specifications",
+		hlist( " " ),
+		hlist( " Product Target for Y Axis", spec1 = edit number() ), 
+
+	),
+	Hlist(
+		Vlist( " Density Elipse ", DensityE = radiobuttons( "95%     ", "99%     ", "99.73%     " ) ),
+		Vlist( " Line Weight ", lweight = radiobuttons( "1     ", "2    ", "3     " ) )
+	),
+	namey = ColList( "Select Y Axis Column", MaxCol( 1 ), MinCol( 1 ), DataType( Numeric ) ),
+	namex = ColList( "Select X Axis Column", MaxCol( 1 ), MinCol( 1 ), DataType( Numeric ) )
+);
+
+//unload the variables
+namex = diadata["namex"];
+namey = diadata["namey"];
+Ytargetnew = diadata["spec1"];
+dpercent = diadata["DensityE"];
+lineweighter = diadata["lweight"];
+
+densityevalue = If( dpercent == 1,
+	.95,
+	If( dpercent == 2,
+		.99,
+		.9973
+	)
+);
+lineweight = If( lineweighter == 1,
+	1,
+	If( lineweighter == 2, 2, 3 )
+);
+
+
+// Draw snipper plot
+biv = Bivariate( Y( Column( namey ) ), X( Column( namex ) ), Fit Orthogonal( Univariate Variances, {Line Color( {213, 72, 87} )} ) );
+// Get orthaganal slope information	
+rbiv = biv << report;
+slp = rbiv[Number Col Box( 6 )] << get( 1 );
+ist = rbiv[Number Col Box( 5 )] << get( 1 );
+ply = rbiv[Number Col Box( 1 )] << get( 2 );
+ply = Round( ply, 4 );
+plystr = (Concat( "Baseline Y Target ", Char( Eval( ply ) ) ));
+plx = rbiv[Number Col Box( 1 )] << get( 1 );
+plx = Round( plx, 4 );
+plxstr = (Concat( "Baseline X Target ", Char( Eval( plx ) ) ));
+newxer = ((Ytargetnew - ist) / slp);
+newxer = Round( newxer, 4 );
+xtargetstring = (Concat( "New X Target ", Char( Eval( newxer ) ) ));
+pytarget = (Concat( "New Y Target ", Char( Eval( Ytargetnew ) ) ));
+biv << close window;
+
+// Draw final output
+
+sharpshooter = Bivariate(
+	Y( Column( namey ) ),
+	X( Column( namex ) ),
+	Density Ellipse( Eval( densityevalue ), {Line Color( {213, 72, 87} ), Line Width( Eval( lineweight ) )} ),
+	Density Ellipse( 0.05, {Line Color( "Red" ), Line Width( lineweight )} ),
+	Fit Orthogonal( Univariate Variances, {Line Color( "Red" ), Line Width( lineweight )} ),
+	SendToReport(
+		Dispatch(
+			{},
+			"1",
+			ScaleBox,
+			{Add Ref Line( Eval( plx ), Solid, {255, 0, 0}, Eval( plxstr ) ), Add Ref Line(
+				Eval( newxer ),
+				Solid,
+				{0, 221, 0},
+				Eval( xtargetstring )
+			), Rotated Labels( 1 )}
+		),
+		Dispatch( {}, "2", ScaleBox, {Add Ref Line( Ytargetnew, Solid, {0, 221, 0}, Eval( pytarget ) )} ),
+		Dispatch( {}, "2", ScaleBox, {Add Ref Line( ply, Solid, {255, 0, 0}, Eval( plystr ) )} ), 
+		
+		Dispatch( {}, "Bivar Plot", FrameBox, {Frame Size( 607, 433 )} ),
+		Dispatch( {}, "Fit Mean ", OutlineBox, {Close( 0 )} )
+	)
+);

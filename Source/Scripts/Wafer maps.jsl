@@ -1,0 +1,484 @@
+﻿Names Default To Here( 1 );
+If( !Namespace Exists( "WaferMap" ),
+	New Namespace( "WaferMap" )
+);
+
+//Check for an active table, if not present open dialog.
+dt = If( N Rows() > 0,
+	dt = Current Data Table(),
+	dt = Open()
+);
+Clear Symbols( NrOfContours, MinContour, MaxContour, Panel );
+
+//dt << Clear Row States();
+stop_flag = 0;
+ContourToggle = 0;
+//Dialog for selection of columns
+diadata = New Window( "Wafer map",
+	<<Modal,
+	Border Box( Left( 3 ), top( 2 ),
+		H List Box(
+			Panel Box( "Select Columns", colListData = Col List Box( All, width( 200 ), nLines( 10 ) ) ),
+			Panel Box( "Cast Selected Columns into Roles",
+				Lineup Box( N Col( 2 ), Spacing( 3 ),
+					Button Box( "Measurement", colListMbox << Append( colListData << GetSelected ) ),
+					colListMbox = Col List Box( width( 200 ), nLines( 1 ), numeric, MaxItems( 1 ), MinItems( 1 ) ),
+					Button Box( "X coordinate", colListXbox << Append( colListData << GetSelected ) ),
+					colListXbox = Col List Box( width( 200 ), nLines( 1 ), numeric, MaxItems( 1 ), MinItems( 1 ) ),
+					Button Box( "Y coordinate", colListYbox << Append( colListData << GetSelected ) ),
+					colListYbox = Col List Box( width( 200 ), nLines( 1 ), numeric, MaxItems( 1 ), MinItems( 1 ) ),
+					Button Box( "WaferID", IDbox << Append( colListData << GetSelected ) ),
+					IDbox = Col List Box( width( 200 ), nLines( 1 ), MaxItems( 1 ), MinItems( 1 ) ),
+					Button Box( "Group", PanelBox << Append( colListData << GetSelected ) ),
+					PanelBox = Col List Box( width( 200 ), nLines( 1 ), MaxItems( 1 ) ),
+					Try(
+						colListXbox << append( Column( "X" ) );
+						colListYbox << append( Column( "Y" ) );
+					),
+
+				)
+			),
+			Panel Box( "Options",
+				V List Box(
+				Box3D = Check Box("3D plots", If( Box3D << get(), Options2DIB << set( 0 );ContourIfBox <<set(0);, Options2DIB << set( 1 ) )),
+				Options2DIB = If Box(
+					1,
+					Lineup Box( N Col( 2 ),
+						
+						Text Box( "Wafer diameter" ),
+						WaferRadiusBox = Number Edit Box( 300 ),
+						Text Box( "Edge exclusion" ),
+						EdgeExclusionBox = Number Edit Box( 3 ),
+						Text Box( "Notch orientation" ),
+						NotchBox = Combo Box( {"Bottom", "Left", "Top", "Right"} ),
+						
+						Text Box( "" ),
+						PointsBox = Check Box( "Show points", If( PointsBox << get() == 0, LabelBox << set all( 0 ) ) ),
+						Text Box( "" ),
+						LabelBox = Check Box( "Label all points", If( LabelBox << get() == 1, PointsBox << set all( 1 ) ) ),
+						Text Box( "" ),
+						FillBox = Check Box( "Fill Areas" ),
+						Text Box( "" ),
+						ContourBox = Check Box( "Specify contours", If( ContourBox << get(), ContourIfBox << set( 1 ), ContourIfBox << set( 0 ) ) ),
+
+					)
+				),
+				ContourIfBox = If Box(
+					0,
+					Panel Box( "Contours",
+						V List Box(
+							Text Box( "All values must be specified:" ),
+							Lineup Box( N Col( 2 ),
+								Text Box( "Nr. of contours" ),
+								NrContoursBox = Number Edit Box( 10 ),
+								Text Box( "Minimum" ),
+								MinimumBox = Number Edit Box(),
+								Text Box( "Maximum" ),
+								MaximumBox = Number Edit Box(),
+							)
+						)
+					)
+				),
+				)
+			),
+			Panel Box( "Actions",
+				Lineup Box( N Col( 1 ),
+					Button Box( "OK",
+						If(!And(N items(colListMbox << Get items()),N items(colListXbox << Get items()),N items(colListYbox << Get items()),N items(IDbox << Get items())),
+							New window("Error",<<modal,text box("You did not fill all required boxes! Make sure you put a wafer ID column in."));
+							stop();
+						);
+						WaferMap:MColRecall = MCol = colListMbox << Get items();
+						WaferMap:XColRecall = XCol = colListXbox << Get items();
+						WaferMap:YColRecall = YCol = colListYbox << Get items();
+						WaferMap:PanelColRecall = Panel = PanelBox << get items();
+						WaferMap:IDCol = IDCol = IDbox << Get items();
+						WaferMap:PointsYNRecall = PointsYN = PointsBox << get();
+						WaferMap:WaferRadiusRecall = WaferRadius = (WaferRadiusBox << get()) / 2;
+						WaferMap:EdgeExclusionRecall = EdgeExclusion = EdgeExclusionBox << get();
+						WaferMap:NotchBoxRecall = NotchBox << get();
+						NotchPosition = Match( NotchBox << get(), 1, "Bottom", 2, "Left", 3, "Top", 4, "Right" );
+						WaferMap:LabelYNRecall = LabelYN = LabelBox << get();
+						WaferMap:Box3DRecall = Option3D = Box3D << get();
+						WaferMap:FillYNRecall = FillYN = FillBox << get();
+						WaferMap:ContourBoxRecall = ContourYN = ContourBox << get();
+						If( ContourBox << get(),
+							WaferMap:NrOfContoursRecall = NrOfContours = NrContoursBox << get();
+							WaferMap:MinContourRecall = MinContour = MinimumBox << get();
+							WaferMap:MaxContourRecall = MaxContour = MaximumBox << get();
+						);
+					),
+					Button Box( "Cancel", stop_flag++ ),
+					Button Box( "Recall",
+						colListMbox << RemoveAll;
+						colListXbox << RemoveAll;
+						colListYbox << RemoveAll;
+						PanelBox << RemoveAll;
+						IDbox << RemoveAll;
+						PointsBox << set( 0 );
+						WaferRadiusBox << set( 300 );
+						EdgeExclusionBox << set( 3 );
+						NotchBox << set( 1 );
+						LabelBox << set( 0 );
+						FillBox << set( 0 );
+						ContourBox << set( 0 );
+						NrContoursBox << set( Empty() );
+						MinimumBox << set( Empty() );
+						MaximumBox << set( Empty() );
+						
+						Try(
+							colListMbox << Append( WaferMap:MColRecall );
+							colListXbox << Append( WaferMap:XColRecall );
+							colListYbox << Append( WaferMap:YColRecall );
+							PanelBox << Append( WaferMap:PanelColRecall );
+							IDbox << Append( WaferMap:IDCol );
+							PointsBox << set( WaferMap:PointsYNRecall );
+							WaferRadiusBox << set( 2 * WaferMap:WaferRadiusRecall );
+							EdgeExclusionBox << set( WaferMap:EdgeExclusionRecall );
+							NotchBox << set( WaferMap:NotchBoxRecall );
+							LabelBox << set( WaferMap:LabelYNRecall );
+							FillBox << set( WaferMap:FillYNRecall );
+							If( WaferMap:Box3DRecall,
+								Box3D << set(WaferMap:Box3DRecall );
+								Options2DIB << set( 0 );
+								ContourIfBox << set( 0 );
+							);	
+							If( WaferMap:ContourBoxRecall,
+								ContourBox << set( WaferMap:ContourBoxRecall );
+								ContourIfBox << set( 1 );
+								NrContoursBox << set( WaferMap:NrOfContoursRecall );
+								MinimumBox << set( WaferMap:MinContourRecall );
+								MaximumBox << set( WaferMap:MaxContourRecall );
+							);
+						);
+					),
+
+				)
+			),
+
+		)
+	)
+);
+//stop();
+If( stop_flag,
+	Print( "User hit cancel" );
+	Stop();
+);
+
+//If label checked then mark all rows as label.
+If( LabelYN,
+	dt << Select All Rows << label( 1 ) << clear select();
+	Column( dt, MCol[1] ) << Format( "Fixed Dec", 12, 2 ) << Label( 1 );
+,
+	dt << Select All Rows << label( 0 ) << clear select();
+	Column( dt, MCol[1] ) << Label( 0 );
+);
+
+Graph = Expr(
+	CP = Contour Plot(
+		X( Expr( XCol ), Expr( YCol ) ),
+		Y( Expr( MCol ) ),
+		By( Expr( IDCol ) ),
+		Label Contours( 0 ),
+		Transform( "None" ),
+		Color Theme( "Jet" ),
+	)
+);
+
+Graph3D = Expr(
+	SP = Surface Plot(
+		Columns( column(Expr( XCol )), column(Expr( YCol )),  Column(Expr( MCol )) ),
+		Datapoints Choice( "Surface" ),
+		Surface Color Theme( "Green to Black to Red" ),
+		Surface Color Theme2( "Green to White to Red" ),
+		Surface Color Theme3( "White to Black" ),
+		Surface Color Theme4( "Blue to Gray to Red" ),
+		Response Column Fill( "Continuous Gradients" ),
+		Response Column Color Theme( "Jet" ),
+		Response Column Color Theme2( "Spectral" ),
+		Response Column Color Theme3( "Jet" ),
+		Response Column Color Theme4( "White to Blue" ),
+		Response(  column(Expr( MCol )) ),
+		Surface Color Method( "Solid", "Solid", "Solid", "Solid" ),
+		SetVariableAxis(  column(Expr( XCol )), Axis Data( {} ) ),
+		SetVariableAxis(  column(Expr( YCol )), Axis Data( {} ) ),
+		SetZAxis(  column(Expr( MCol )), Axis Data( {} ) ),
+		SetXVariable(  column(Expr( XCol )) ),
+		SetYVariable(  column(Expr( YCol )) ),
+		Frame3D( Set Rotation( -54, 0, 38 ) ),
+		By( column(Expr( IDCol )) )
+	)
+);
+
+If(Option3D,
+//3D
+	Eval(Eval Expr(Graph3D));
+	
+	Summarize(
+		dt,
+		ID = by( IDCol[1] ),
+		c = count,
+		MeanSum = Mean( MCol[1] ),
+		SDSum = Std Dev( MCol[1] ),
+		MinSum = Min( MCol[1] ),
+		MaxSum = Max( MCol[1] ),
+	);
+	If(is list(SP),
+		For( i = 1, i <= N Items( SP ), i++,
+			(SP[i] << report)[OutlineBox(2)] << SibAppend(
+				Outline Box("Summary Statistics",
+					Table Box(
+						Table Box(
+							String Col Box( "Statistic", {"Count", "Mean", "StdDev", "Min", "Max", "Range", "Range %NU", "1-σ %NU"} ),
+							Number Col Box( MCol[1], {c[i], MeanSum[i], SDSum[i], MinSum[i], MaxSum[i], MaxSum[i] - MinSum[i], (MaxSum[i] - MinSum[i])/MeanSum[i]*100, SDSum[i] / MeanSum[i] * 100} )
+						)
+					)
+				),
+				Vertical
+			)
+		);
+		(SP[N Items( SP )] << report)[Outline Box( 1 )] << SibAppend(
+			Outline Box( "Summary Statistics",
+				Table Box(
+					String Col Box( IDCol[1], ID ),
+					Number Col Box( "Count", c ),
+					Number Col Box( "Mean", MeanSum ),
+					Number Col Box( "StdDev", SDSum ),
+					Number Col Box( "Min", MinSum ),
+					Number Col Box( "Max", MaxSum ),
+					Number Col Box( "Range", MaxSum - MinSum ),
+					Number Col Box( "Range %NU", , (MaxSum - MinSum):/ MeanSum*100),
+					Number Col Box( "1-σ %NU", SDSum :/ MeanSum * 100 )
+
+				)
+			)
+		);
+	,
+		(SP << report)[OutlineBox(2)] << SibAppend(
+			Outline Box("Summary Statistics",
+				Table Box(
+					String Col Box( "Statistic", {"Count", "Mean", "StdDev", "Min", "Max", "Range", "Range %NU", "1-σ %NU"} ),
+					Number Col Box( MCol[1], {c[1], MeanSum[1], SDSum[1], MinSum[1], MaxSum[1], MaxSum[1] - MinSum[1], (MaxSum[1] - MinSum[1])/MeanSum[1]*100, SDSum[1] / MeanSum[1] * 100} )
+				)
+			),
+			Vertical
+		);
+	)
+,
+//2D
+	If( N Items( Panel ) == 0, 
+	// Build list
+		Eval( Eval Expr( Graph ) );
+		If( !Is Empty( NrOfContours ),
+			CP << Specify Contours( Min( MinContour ), Max( MaxContour ), N( NrOfContours ) )
+		);
+		If( PointsYN,
+			CP << Show Data Points( 1 )
+		);
+		If( FillYN,
+			CP << Fill Areas( 1 )
+		);
+		CP << Dispatch(
+			{},
+			"1",
+			ScaleBox,
+			{Min( -1.05*WaferRadius ), Max( 1.05*WaferRadius ), Inc( 2*WaferRadius/6 ), Minor Ticks( 1 )}
+		);
+		CP << Dispatch(
+			{},
+			"2",
+			ScaleBox,
+			{Min( -1.05*WaferRadius ), Max( 1.05*WaferRadius ), Inc( 2*WaferRadius/6 ), Minor Ticks( 1 )}
+		);
+		eval(
+			substitute(expr(CP << Dispatch(
+				{},
+				"Contour Plot Graph",
+				FrameBox,
+				{Frame Size( 200, 200 ), Add Graphics Script(
+					5,
+					Description( "Script" ), //Draw notch
+					Fill Color( 69 );
+					NP = __NotchPosition__;
+					Match( NP ,
+						"Bottom", Polygon( {0, -1 * __WaferRadius__}, {-0.033 * __WaferRadius__, -1.067 * __WaferRadius__}, {0.033 * __WaferRadius__, -1.067 * __WaferRadius__} ),
+						"Top", Polygon( {0, __WaferRadius__}, {-0.033 * __WaferRadius__, 1.067 * __WaferRadius__}, {0.033 * __WaferRadius__, 1.067 * __WaferRadius__} ),
+						"Left", Polygon( {-1 * __WaferRadius__, 0}, {-1.067 * __WaferRadius__, -0.033 * __WaferRadius__}, {-1.067 * __WaferRadius__, 0.033 * __WaferRadius__} ),
+						"Right", Polygon( {__WaferRadius__, 0}, {1.067 * __WaferRadius__, -0.033 * __WaferRadius__}, {1.067 * __WaferRadius__, 0.033 * __WaferRadius__} )
+					);
+					//Circle( {0, 0}, __WaferRadius__ );
+					oval(__WaferRadius__,__WaferRadius__,-__WaferRadius__,-__WaferRadius__);
+					//Circle( {0, 0}, (__WaferRadius__ - __EdgeExclusion__) );
+					oval(__WaferRadius__ - __EdgeExclusion__,__WaferRadius__ - __EdgeExclusion__,-__WaferRadius__ + __EdgeExclusion__,-__WaferRadius__ + __EdgeExclusion__);
+				)}
+			)),
+			expr(__WaferRadius__),WaferRadius,
+			expr(__EdgeExclusion__),EdgeExclusion,
+			expr(__NotchPosition__),NotchPosition,
+			)
+		);
+		Summarize(
+			dt,
+			ID = by( IDCol[1] ),
+			c = count,
+			MeanSum = Mean( MCol[1] ),
+			SDSum = Std Dev( MCol[1] ),
+			MinSum = Min( MCol[1] ),
+			MaxSum = Max( MCol[1] ),
+		);
+		If(is list(CP),
+			For( i = 1, i <= N Items( CP ), i++,
+				(CP[i] << report)[List Box( 1 )] << SibAppend(
+					Table Box(
+						"Summary Statistics",
+						Table Box(
+							String Col Box( "Statistic", {"Count", "Mean", "StdDev", "Min", "Max", "Range", "Range %NU", "1-σ %NU"} ),
+							Number Col Box( MCol[1], {c[i], MeanSum[i], SDSum[i], MinSum[i], MaxSum[i], MaxSum[i] - MinSum[i], (MaxSum[i] - MinSum[i])/MeanSum[i]*100, SDSum[i] / MeanSum[i] * 100} )
+						)
+					),
+					Horizontal
+				)
+			);
+			(CP[N Items( CP )] << report)[Outline Box( 1 )] << SibAppend(
+				Outline Box( "Summary Statistics",
+					Table Box(
+						String Col Box( IDCol[1], ID ),
+						Number Col Box( "Count", c ),
+						Number Col Box( "Mean", MeanSum ),
+						Number Col Box( "StdDev", SDSum ),
+						Number Col Box( "Min", MinSum ),
+						Number Col Box( "Max", MaxSum ),
+						Number Col Box( "Range", MaxSum - MinSum ),
+						Number Col Box( "Range %NU", (MaxSum - MinSum):/MeanSum*100),
+						Number Col Box( "1-σ %NU", SDSum :/ MeanSum *100 )
+
+					)
+				)
+			);
+		,
+			(CP << report)[List Box( 1 )] << SibAppend(
+				Table Box(
+					"Summary Statistics",
+					Table Box(
+						String Col Box( "Statistic", {"Count{c[1], MeanSum[1]", "Mean", "StdDev", "Min", "Max", "Range", "Range %NU", "1-σ %NU"} ),
+						Number Col Box( MCol[1], {c[1], MeanSum[1], SDSum[1], MinSum[1], MaxSum[1], MaxSum[1] - MinSum[1], (MaxSum[1] - MinSum[1])/MeanSum[1]*100, SDSum[1] / MeanSum[1]*100} )
+					)
+				),
+				Horizontal
+			);
+		);
+	,
+	//Build panel
+		New window("Wafer panel",PanelYBox = v list box());
+		
+		dtSub = dt << Subset(
+			By( Panel[1] ),
+			All rows,
+			Selected columns only( 0 ),
+		);
+		
+		For(i=1,i<=nitems(dtSub),i++,
+			PanelYBox<<Append(Outline Box(dtSub[i]<<get name(),PanelH = H list box()));
+			Current data table(dtSub[i]);
+			Eval( Eval Expr( Graph ) );
+			If( !Is Empty( NrOfContours ),
+				CP << Specify Contours( Min( MinContour ), Max( MaxContour ), N( NrOfContours ) )
+			);
+			If( PointsYN,
+				CP << Show Data Points( 1 )
+			);
+			If( FillYN,
+				CP << Fill Areas( 1 )
+			);
+			CP << Dispatch(
+				{},
+				"1",
+				ScaleBox,
+				{Min( -1.05*WaferRadius ), Max( 1.05*WaferRadius ), Inc( 2*WaferRadius/6 ), Minor Ticks( 1 )}
+			);
+			CP << Dispatch(
+				{},
+				"2",
+				ScaleBox,
+				{Min( -1.05*WaferRadius ), Max( 1.05*WaferRadius ), Inc( 2*WaferRadius/6 ), Minor Ticks( 1 )}
+			);
+			eval(
+				substitute(expr(CP << Dispatch(
+					{},
+					"Contour Plot Graph",
+					FrameBox,
+					{Frame Size( 200, 200 ), Add Graphics Script(
+						5,
+						Description( "Script" ), //Draw notch
+						Fill Color( 69 );
+						Match( NotchPosition,
+							"Bottom", Polygon( {0, -1 * __WaferRadius__}, {-0.033 * __WaferRadius__, -1.067 * __WaferRadius__}, {0.033 * __WaferRadius__, -1.067 * __WaferRadius__} ),
+							"Top", Polygon( {0, __WaferRadius__}, {-0.033 * __WaferRadius__, 1.067 * __WaferRadius__}, {0.033 * __WaferRadius__, 1.067 * __WaferRadius__} ),
+							"Left", Polygon( {-1 * __WaferRadius__, 0}, {-1.067 * __WaferRadius__, -0.033 * __WaferRadius__}, {-1.067 * __WaferRadius__, 0.033 * __WaferRadius__} ),
+							"Right", Polygon( {__WaferRadius__, 0}, {1.067 * __WaferRadius__, -0.033 * __WaferRadius__}, {1.067 * __WaferRadius__, 0.033 * __WaferRadius__} )
+						);
+						oval(__WaferRadius__,__WaferRadius__,-__WaferRadius__,-__WaferRadius__);
+						oval(__WaferRadius__ - __EdgeExclusion__,__WaferRadius__ - __EdgeExclusion__,-__WaferRadius__ + __EdgeExclusion__,-__WaferRadius__ + __EdgeExclusion__);
+					)}
+				)),
+				expr(__WaferRadius__),WaferRadius,
+				expr(__EdgeExclusion__),EdgeExclusion,
+				)
+			);
+			Summarize(
+				dtSub[i],
+				ID = by( IDCol[1] ),
+				c = count,
+				MeanSum = Mean( MCol[1] ),
+				SDSum = Std Dev( MCol[1] ),
+				MinSum = Min( MCol[1] ),
+				MaxSum = Max( MCol[1] ),
+			);
+			
+			If(is list(CP),
+				For(k=1,k<=Nitems(CP),k++,
+					(CP[k] << report)[List Box( 1 )] << SibAppend(
+						Table Box(
+							"Summary Statistics",
+							Table Box(
+								String Col Box( "Statistic", {"Count", "Mean", "StdDev", "Min", "Max", "Range", "Range %NU", "1-σ %NU"} ),
+								Number Col Box( MCol[1], {c[k], MeanSum[k], SDSum[k], MinSum[k], MaxSum[k], MaxSum[k] - MinSum[k], (MaxSum[k] - MinSum[k])/MeanSum[k]*100, SDSum[k] / MeanSum[k]*100} )
+							)
+						),
+						Horizontal
+					);
+					PanelH<< Append(Report(CP[k]));
+				);
+			,
+				k=1;
+				(CP << report)[List Box( 1 )] << SibAppend(
+					Table Box(
+						"Summary Statistics",
+						Table Box(
+							String Col Box( "Statistic", {"Count", "Mean", "StdDev", "Min", "Max", "Range", "Range %NU", "1-σ %NU"} ),
+							Number Col Box( MCol[1], {c[k], MeanSum[k], SDSum[k], MinSum[k], MaxSum[k], MaxSum[k] - MinSum[k], (MaxSum[k] - MinSum[k]) / MeanSum[k]*100, SDSum[k] / MeanSum[k]*100} )
+						)
+					),
+					Horizontal
+				);
+				PanelH<< Append(Report(CP));
+			);
+			PanelH<<Append(
+				Outline Box( "Summary Statistics " || char(dtSub[i]<<get name()),
+					Table Box(
+						String Col Box( IDCol[1], ID ),
+						Number Col Box( "Count", c ),
+						Number Col Box( "Mean", MeanSum ),
+						Number Col Box( "StdDev", SDSum ),
+						Number Col Box( "Min", MinSum ),
+						Number Col Box( "Max", MaxSum ),
+						Number Col Box( "Range", MaxSum - MinSum ),
+						Number Col Box( "Range %NU", (MaxSum - MinSum) :/ MeanSum*100),
+						Number Col Box( "1-σ %NU", SDSum :/ MeanSum *100 )
+					)
+				)
+			);
+		);
+		For(i=nitems(dtSub),i>=1,i--,Close(dtSub[i], No Save));
+	);
+);

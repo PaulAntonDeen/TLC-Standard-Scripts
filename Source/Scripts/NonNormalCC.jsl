@@ -1,0 +1,575 @@
+﻿//Non-normal control chart script. (c) 2017 Paul Deen
+
+names default to here(1);
+
+//Check for an active table, if not present open dialog.
+dt = If( N Rows() > 0,
+	dt = Current Data Table(),
+	dt = Open()
+);
+
+dt << Clear Select;
+dt << Clear Column Selection;
+Clear globals(SpecLimit, IDCol);
+If( !Namespace Exists( "NonNormalControlChart" ),nsref = New Namespace("NonNormalControlChart"));
+
+Recall = expr(
+	Try(
+		YDestinationBox << set items( NonNormalControlChart:YColRecall );
+		XDestinationBox << set items( NonNormalControlChart:XColRecall );
+		SL << Set( NonNormalControlChart:SLRecall );
+		GoalCB << set( NonNormalControlChart:GoalRecall );
+		SetModel;
+		RBModel << set(NonNormalControlChart:ModelRecall);
+	);
+);
+
+Validate = function({},
+	SetReturn=1;
+	If(and( num(word(1,jmp version(),"."))<14, RBModel << get selected() == "Shash"),
+		new window("Error", << modal, text box("JMP versions lower than 14 cannot do a Shash fit. Please use one of the other fits."));
+		SetReturn=0;
+	);
+	If(is missing(SL << get()),
+		new window("Error", << modal, text box("Please specify a Spec Limit"));
+		SetReturn=0;
+	);
+	If( n items(YDestinationBox << get items())<1,
+		new window("Error", << modal, text box("You must specify a Y column"));
+		SetReturn=0;
+	);
+	Return(SetReturn)
+);
+
+SetModel = expr(
+	If( GoalCB << get()==1,
+		RBModel << Set Items( {"Shash", "Gamma", "Weibull", "Exponential", "LogNormal", "Glog"} );
+		SpecTbox << set text("USL");
+	,
+		RBModel << set items( {"Shash", "Gamma", "Weibull", "LogNormal", "Glog"} );
+		SpecTbox << set text("LSL");
+	);
+	try(getLimit(YDestinationBox << Get Items(),GoalCB << Get Selected));
+);
+
+getLimit = function({colname, goal},{Default Local},
+	//colname = column((YDestinationBox << Get Items())[1]);
+	//goal = GoalCB << Get Selected;
+	limits = column(colname[1]) << Get Property(Spec limits);
+	for (i=1, i <= N Arg(limits),i++,
+		match(goal,
+			"Minimize",
+				if(
+					startswith(char(arg(limits,i)),"USL"),
+					SL << set(arg(arg(limits,i),1));
+					break();
+				);
+				,
+			"Maximize",
+				if(
+					startswith(char(arg(limits,i)),"LSL"),
+					SL << set(arg(arg(limits,i),1));
+					break();
+				);
+				,
+		)
+	);
+);
+
+//Launch dialog
+diadata = New Window( "Create Non-Normal control chart",
+	//<<Modal,
+	<<on validate(Validate),
+	h center box(v center box(Border Box( Left( 3 ), top( 2 ),
+		V List Box(
+			Panel Box( "Columns",
+				Lineup Box( N Col( 3 ),
+					SourceBox = Filter Col Selector( All, nLines( 5 ) ),
+					Lineup Box( N Col( 2 ),
+						Button Box( "Set Y-Value", YDestinationBox << Append( SourceBox << GetSelected ) ),
+						YDestinationBox = Col List Box( nLines( 1 ), MaxItems( 1 ), MinItems( 1 ), numeric, On Change(getLimit(YDestinationBox << Get Items(),GoalCB << Get Selected)) ),
+						Button Box( "Set X-Label", XDestinationBox << Append( SourceBox << GetSelected ) ),
+						XDestinationBox = Col List Box( nLines( 1 ), MaxItems( 1 ) ),
+					),
+				)
+			),
+			h list box(
+				Panel box("Instructions",Text box("Only use this tool for a \!"Minimize\!" or \!"Maximize\!" type of control chart where the response is not normally distributed. Use Distribution platform to find the right model.", << set wrap(160))),
+				Panel box("Options",
+					Lineup Box( N Col( 2 ),
+						Text Box( "Goal" ),
+						GoalCB = Combo Box( {"Minimize", "Maximize"},SetModel ),
+						SpecTbox = Text Box( "" ),
+						SL = Number Edit Box(),
+						Text Box( "Modelling distribution" ),
+						RBModel = Radio Box( {.} ),
+						SetModel;
+					)
+				),
+				Panel Box( "Actions",
+					Lineup Box( N Col( 1 ),
+						Button Box( "OK",
+							ResponseCol = Column( (YDestinationBox << Get items())[1] );
+							NonNormalControlChart:YColRecall = YDestinationBox << get items();
+							Try(IDCol = Column( (XDestinationBox << Get items())[1] ));
+							NonNormalControlChart:XColRecall = XDestinationBox << get items();
+							Try(NonNormalControlChart:SLRecall = SpecLimit = SL << Get);
+							Goal = GoalCB << get selected();
+							NonNormalControlChart:GoalRecall = GoalCB << Get();
+							Distribution = RBModel << Get Selected();
+							NonNormalControlChart:ModelRecall = RBModel << Get();
+							Body;
+						),
+						Button Box( "Remove",
+							YDestinationBox << RemoveSelected;
+							XDestinationBox << RemoveSelected;
+						),
+						Button Box( "Recall", Recall ),
+						Button Box( "Cancel", stop_flag++ ),
+					)
+				)
+			)
+		),
+	)))
+);
+
+Body = expr(
+	If(
+		Distribution == "Shash",
+			Dist = Report(
+				Distribution(
+					Stack( 1 ),
+					Continuous Distribution(
+						Column( ResponseCol ),
+						Horizontal Layout( 1 ),
+						Vertical( 0 ),
+						Count Axis( 1 ),
+						Fit Distribution( SHASH ),
+					),
+				)
+			);
+			ShapeGamma = (Dist[Number Col Box( "Estimate" )] << get as matrix)[1];
+			ShapeDelta = (Dist[Number Col Box( "Estimate" )] << get as matrix)[2];
+			Theta = (Dist[Number Col Box( "Estimate" )] << get as matrix)[3];
+			ScaleSigma = (Dist[Number Col Box( "Estimate" )] << get as matrix)[4];
+			Dist << Close Window;
+			If(Goal == "Minimize",
+				Equivalent0ksigma = Shash Quantile( Normal Distribution(0), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+				Equivalent1ksigma = Shash Quantile( Normal Distribution(1), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+				Equivalent2ksigma = Shash Quantile( Normal Distribution(2), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+				Equivalent3ksigma = Shash Quantile( Normal Distribution(3), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+				,
+				Equivalent0ksigma = Shash Quantile( Normal Distribution(0), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+				Equivalent1ksigma = Shash Quantile( Normal Distribution(-1), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+				Equivalent2ksigma = Shash Quantile( Normal Distribution(-2), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+				Equivalent3ksigma = Shash Quantile( Normal Distribution(-3), ShapeGamma, ShapeDelta, Theta, ScaleSigma );
+			);
+		,
+		Distribution == "Gamma",
+			Dist = Report(
+				Distribution(
+					Stack( 1 ),
+					Continuous Distribution(
+						Column( ResponseCol ),
+						Horizontal Layout( 1 ),
+						Vertical( 0 ),
+						Count Axis( 1 ),
+						Fit Distribution( Gamma() ),
+					),
+				)
+			);
+			Alpha = (Dist[Number Col Box( "Estimate" )] << get as matrix)[1];
+			Sigma = (Dist[Number Col Box( "Estimate" )] << get as matrix)[2];
+			Theta = (Dist[Number Col Box( "Estimate" )] << get as matrix)[3];
+			Dist << Close Window;
+			If(Goal == "Minimize",
+				Equivalent0ksigma = Gamma Quantile( Normal Distribution(0), Alpha, Sigma, Theta );
+				Equivalent1ksigma = Gamma Quantile( Normal Distribution(1), Alpha, Sigma, Theta );
+				Equivalent2ksigma = Gamma Quantile( Normal Distribution(2), Alpha, Sigma, Theta );
+				Equivalent3ksigma = Gamma Quantile( Normal Distribution(3), Alpha, Sigma, Theta );
+				,
+				Equivalent0ksigma = Gamma Quantile( Normal Distribution(0), Alpha, Sigma, Theta );
+				Equivalent1ksigma = Gamma Quantile( Normal Distribution(-1), Alpha, Sigma, Theta );
+				Equivalent2ksigma = Gamma Quantile( Normal Distribution(-2), Alpha, Sigma, Theta );
+				Equivalent3ksigma = Gamma Quantile( Normal Distribution(-3), Alpha, Sigma, Theta );
+			);
+		,
+		Distribution == "Weibull",
+			Dist = Report(
+				Distribution(
+					Stack( 1 ),
+					Continuous Distribution(
+						Column( ResponseCol ),
+						Horizontal Layout( 1 ),
+						Vertical( 0 ),
+						Count Axis( 1 ),
+						Fit Distribution( Weibull() ),
+					),
+				)
+			);
+			Alpha = (Dist[Number Col Box( "Estimate" )] << get as matrix)[1];
+			Beta = (Dist[Number Col Box( "Estimate" )] << get as matrix)[2];
+			Dist << Close Window;
+			If(Goal == "Minimize",
+				Equivalent0ksigma = Weibull Quantile( Normal Distribution(0), Beta, Alpha );
+				Equivalent1ksigma = Weibull Quantile( Normal Distribution(1), Beta, Alpha );
+				Equivalent2ksigma = Weibull Quantile( Normal Distribution(2), Beta, Alpha );
+				Equivalent3ksigma = Weibull Quantile( Normal Distribution(3), Beta, Alpha );
+				,
+				Equivalent0ksigma = Weibull Quantile( Normal Distribution(0), Beta, Alpha );
+				Equivalent1ksigma = Weibull Quantile( Normal Distribution(-1), Beta, Alpha );
+				Equivalent2ksigma = Weibull Quantile( Normal Distribution(-2), Beta, Alpha );
+				Equivalent3ksigma = Weibull Quantile( Normal Distribution(-3), Beta, Alpha );
+			);
+		,
+		Distribution == "Exponential",
+			Dist = Report(
+				Dister = Distribution(
+					Stack( 1 ),
+					Continuous Distribution(
+						Column( ResponseCol ),
+						Horizontal Layout( 1 ),
+						Vertical( 0 ),
+						Count Axis( 1 ),
+						Fit Distribution( Exponential ),
+					),
+				)
+			);
+			Scale = (Dist[Number Col Box( "Estimate" )] << get as matrix)[1];
+			Dist << Close Window;
+			Equivalent0ksigma = -(Ln( (-Normal Distribution(0)) + 1 ) * Scale);
+			Equivalent1ksigma = -(Ln( (-Normal Distribution(1)) + 1 ) * Scale);
+			Equivalent2ksigma = -(Ln( (-Normal Distribution(2)) + 1 ) * Scale);
+			Equivalent3ksigma = -(Ln( (-Normal Distribution(3)) + 1 ) * Scale);
+		,	
+		Distribution == "LogNormal",
+			Dist = Report(
+				Distribution(
+					Stack( 1 ),
+					Continuous Distribution(
+						Column( ResponseCol ),
+						Horizontal Layout( 1 ),
+						Vertical( 0 ),
+						Count Axis( 1 ),
+						Fit Distribution( LogNormal() ),
+					),
+				)
+			);
+			Mu = (Dist[Number Col Box( "Estimate" )] << get as matrix)[1];
+			Sigma = (Dist[Number Col Box( "Estimate" )] << get as matrix)[2];
+			Dist << Close Window;
+			If(Goal == "Minimize",
+				Equivalent0ksigma = LogNormal Quantile( Normal Distribution(0), Mu, Sigma );
+				Equivalent1ksigma = LogNormal Quantile( Normal Distribution(1), Mu, Sigma );
+				Equivalent2ksigma = LogNormal Quantile( Normal Distribution(2), Mu, Sigma );
+				Equivalent3ksigma = LogNormal Quantile( Normal Distribution(3), Mu, Sigma );
+				,
+				Equivalent0ksigma = LogNormal Quantile( Normal Distribution(0), Mu, Sigma );
+				Equivalent1ksigma = LogNormal Quantile( Normal Distribution(-1), Mu, Sigma );
+				Equivalent2ksigma = LogNormal Quantile( Normal Distribution(-2), Mu, Sigma );
+				Equivalent3ksigma = LogNormal Quantile( Normal Distribution(-3), Mu, Sigma );
+			);
+			,	
+		Distribution == "GLog",
+			Dist = Report(
+				Distribution(
+					Stack( 1 ),
+					Continuous Distribution(
+						Column( ResponseCol ),
+						Horizontal Layout( 1 ),
+						Vertical( 0 ),
+						Count Axis( 1 ),
+						Fit Distribution( GLog ),
+					),
+				)
+			);
+			Mu = (Dist[Number Col Box( "Estimate" )] << get as matrix)[1];
+			Sigma = (Dist[Number Col Box( "Estimate" )] << get as matrix)[2];
+			Lambda = (Dist[Number Col Box( "Estimate" )] << get as matrix)[3];
+			Dist << Close Window;
+			If(Goal == "Minimize",
+				Equivalent0ksigma = Glog Quantile( Normal Distribution(0), Mu, Sigma, Lambda );
+				Equivalent1ksigma = Glog Quantile( Normal Distribution(1), Mu, Sigma, Lambda );
+				Equivalent2ksigma = Glog Quantile( Normal Distribution(2), Mu, Sigma, Lambda );
+				Equivalent3ksigma = Glog Quantile( Normal Distribution(3), Mu, Sigma, Lambda );
+				,
+				Equivalent0ksigma = Glog Quantile( Normal Distribution(0), Mu, Sigma, Lambda );
+				Equivalent1ksigma = Glog Quantile( Normal Distribution(-1), Mu, Sigma, Lambda );
+				Equivalent2ksigma = Glog Quantile( Normal Distribution(-2), Mu, Sigma, Lambda );
+				Equivalent3ksigma = Glog Quantile( Normal Distribution(-3), Mu, Sigma, Lambda );
+			);
+	);
+
+	//Create graph script
+	Match(Goal,
+	"Minimize",
+		Eval(
+			Substitute(
+				Expr(
+					dt << new script(
+						Concat( "Graph ", __ColName__ ),
+						PPMDist = Distribution(invisible,
+							Stack( 1 ),
+							Continuous Distribution(
+								Column(__ResponseCol__),__Distribution__(Spec Limits( USL(__SpecLimit__)))
+								//Capability Analysis( 0 ),
+							)
+						);
+						NewPPM = Report(PPMDist)["Quantile Sigma"][Number col box(3)][3];
+						PPMDist << close window();
+					
+					//Define alarms
+						Current Data Table()<<Clear Row States();
+						OOS = 0;
+						OOC = 0;
+						Goal = __Goal__;
+						//Calculate alarms
+						For Each Row(
+							//2 out of 3 beyond 2s
+							If( Row() > 2,
+								If(__ResponseCol__[Row()] >= __Equivalent2ksigma__ & or(__ResponseCol__[Row()-1] >= __Equivalent2ksigma__,__ResponseCol__[Row()-2] >= __Equivalent2ksigma__),
+								Row State( Row() ) = As Row State(99152);
+								OOC++),
+							);
+							//8 out of 9 on one side of average
+							If( Row() > 8,
+								n = 0;
+								For( i = 0, i <= 8, i++,
+									If( __ResponseCol__[Row() - i] > __Equivalent0ksigma__,
+										n++
+									)
+								);
+								If( n > 8,
+									Row State( Row() ) = As Row State(99104);
+									OOC++;
+								),
+							);
+							//1 out of control
+							If( __ResponseCol__[Row()] > __Equivalent3ksigma__,
+								Row State( Row() ) = As Row State(99088);
+								OOC++;
+							);
+							//1 Out of spec
+							If( __ResponseCol__[Row()] > __SpecLimit__,
+								Row State( Row() ) = As Row State(1457);
+								OOS++;
+								OOC++;
+							);
+						);
+						POOC = round(100*OOC/nRows(),2);
+						POOS = round(100*OOS/nRows(),2);
+						
+						CC = Control Chart(
+							Sample Label( __XCol__ ),
+							Sample Size( 1 ),
+							KSigma( 3 ),
+							Chart Col(__ResponseCol__,Run Chart( Show Center Line( 0 ), Show Zones( 0 ), Shade Zones( 0 ) )),
+							SendToReport(
+								Dispatch(
+									{},
+									"2",
+									ScaleBox,
+									{Min( 0 ), Max( 1.1 * max(__SpecLimit__,__Equivalent3ksigma__) ),	Inc( Round( (1.1 * __SpecLimit__ - 0) / 6, 0 ) ),	Minor Ticks( 1 ),
+										Add Ref Line( __SpecLimit__, "Solid", "Blue", Concat("Upper Spec limit ",Char(round(__SpecLimit__,2))), 1 ),
+										Add Ref Line( __Equivalent0ksigma__, "Solid", 83, Concat("Target ",Char(round(__Equivalent0ksigma__,2))), 1 ),
+										Add Ref Line( __Equivalent1ksigma__, "Solid", 83, Concat("1 sigma ",Char(round(__Equivalent1ksigma__,2))), 1 ),
+										Add Ref Line( __Equivalent2ksigma__, "Solid", 83, Concat("2 sigma ",Char(round(__Equivalent2ksigma__,2))), 1 ),
+										Add Ref Line( __Equivalent3ksigma__, "Solid", 83, Concat("3 sigma ",Char(round(__Equivalent3ksigma__,2))), 1 ),
+										Add Ref Line( {__Equivalent3ksigma__, 1.1 * max(__SpecLimit__,__Equivalent3ksigma__)}, "Solid", "Red", "", 1, 0.4 ),
+										Add Ref Line( {__Equivalent1ksigma__, __Equivalent3ksigma__}, "Solid", "Yellow", "", 1, 0.4 ),
+										Add Ref Line( {0, __Equivalent1ksigma__}, "Solid", "Green", "", 1, 0.4 )
+									}
+								),						
+								Dispatch(
+									{""},
+									"Run Chart",
+									FrameBox,
+									{Frame Size( 845, 278 )}
+								),
+								Dispatch(
+									{""},
+									"Run Chart",
+									FrameBox( 2 ),
+									{Frame Size( 98, 278 )}
+								)
+							)
+						);
+						
+						(CC << report)[ListBox(2)] << Append(
+							V List Box(
+								Outline Box( "Legend",
+									V List Box(
+										Text Box("Blue star: Out of spec"),
+										Text Box( "Alarm 1: 1 point out of 3 k-Sigma" ),
+										Text Box( "Alarm 2: 9 in a row on one side of Median" ),
+										Text Box( "Alarm 5: 2 out of 3 points beyond 2 k-Sigma" )
+									)
+								),
+								Outline Box( "Capability using " || __DistributionChar__,
+									H List Box(
+										String Col Box( "Name",
+											{"%OOS predicted (PPM)", "K-Sigma", "Control Limit", "%OOC",
+											"%OOS Actual"}
+										),
+										Number Col Box( "Value",
+											{NewPPM, Normal Quantile( 1 - 2 * NewPPM / 1000000 ),
+											__Equivalent3ksigma__, POOC, POOS}
+										)
+									)
+								)
+							)
+						)
+					)
+				),
+				Expr(__ColName__), ResponseCol << get name,
+				Expr(__ResponseCol__), ResponseCol,
+				Expr(__Equivalent0ksigma__),Equivalent0ksigma,
+				Expr(__Equivalent1ksigma__),Equivalent1ksigma,
+				Expr(__Equivalent2ksigma__),Equivalent2ksigma,
+				Expr(__Equivalent3ksigma__),Equivalent3ksigma,
+				Expr(__SpecLimit__),SpecLimit,
+				Expr(__Distribution__),parse(Distribution),
+				Expr(__DistributionChar__),Distribution,
+				Expr(__XCol__),if(Is Empty(IDCol),empty(),IDCol),
+				Expr(__Goal__),Goal,
+			)
+		),
+	"Maximize",
+		Eval(
+			Substitute(
+				Expr(
+					dt << new script(
+						Concat( "Graph ", __ColName__ ),
+						PPMDist = Distribution(invisible,
+							Stack( 1 ),
+							Continuous Distribution(
+								Column(__ResponseCol__),__Distribution__(Spec Limits( LSL(__SpecLimit__)))
+								//Capability Analysis( 0 ),
+							)
+						);
+						NewPPM = Report(PPMDist)["Quantile Sigma"][Number col box(3)][3];
+						PPMDist << close window();
+					
+					//Define alarms
+						Current Data Table()<<Clear Row States();
+						OOS = 0;
+						OOC = 0;
+						Goal = __Goal__;
+						//Calculate alarms
+						For Each Row(
+							//2 out of 3 beyond 2s
+							If( Row() > 2,
+								If(__ResponseCol__[Row()] <= __Equivalent2ksigma__ & or(__ResponseCol__[Row()-1] <= __Equivalent2ksigma__,__ResponseCol__[Row()-2] <= __Equivalent2ksigma__),
+								Row State( Row() ) = As Row State(99152);
+								OOC++;
+								);
+							);
+							//8 out of 9 on one side of average
+							If( Row() > 8,
+								n = 0;
+								For( i = 0, i <= 8, i++,
+									If( __ResponseCol__[Row() - i] < __Equivalent0ksigma__,
+										n++
+									)
+								);
+								If( n > 8,
+									Row State( Row() ) = As Row State(99104);
+									OOC++;
+								);
+							);
+							//1 out of control
+							If( __ResponseCol__[Row()] < __Equivalent3ksigma__,
+								Row State( Row() ) = As Row State(99088);
+								OOC++;
+							);
+							//1 Out of spec
+							If( __ResponseCol__[Row()] < __SpecLimit__,
+								Row State( Row() ) = As Row State(1457);
+								OOS++;
+								OOC++;
+							);
+						);
+						POOC = Round(100*OOC/nRows(),2);
+						POOS = Round(100*OOS/nRows(),2);
+						RangeMin = 0.9 * min(__SpecLimit__,__Equivalent3ksigma__);
+						RangeMax = __Equivalent0ksigma__ + (__Equivalent0ksigma__ - RangeMin) ;
+							
+						CC = Control Chart(
+							Sample Label( __XCol__ ),
+							Sample Size( 1 ),
+							KSigma( 3 ),
+							Chart Col(__ResponseCol__,Run Chart( Show Center Line( 0 ), Show Zones( 0 ), Shade Zones( 0 ) )),
+							SendToReport(
+								Dispatch(
+									{},
+									"2",
+									ScaleBox,
+									{Min( RangeMin ), Max(RangeMax), Inc( Round( (RangeMax-RangeMin) / 6, 0 ) ), Minor Ticks( 1 ),
+										Add Ref Line( __SpecLimit__, "Solid", "Blue", Concat("Lower Spec limit ",Char(round(__SpecLimit__,2))), 1 ),
+										Add Ref Line( __Equivalent0ksigma__, "Solid", 83, Concat("Target ",Char(round(__Equivalent0ksigma__,2))), 1 ),
+										Add Ref Line( __Equivalent1ksigma__, "Solid", 83, Concat("-1ơ ",Char(round(__Equivalent1ksigma__,2))), 1 ),
+										Add Ref Line( __Equivalent2ksigma__, "Solid", 83, Concat("-2ơ ",Char(round(__Equivalent2ksigma__,2))), 1 ),
+										Add Ref Line( __Equivalent3ksigma__, "Solid", 83, Concat("-3ơ ",Char(round(__Equivalent3ksigma__,2))), 1 ),
+										Add Ref Line( {RangeMin,__Equivalent3ksigma__}, "Solid", "Red", "", 1, 0.4 ),
+										Add Ref Line( {__Equivalent3ksigma__,__Equivalent1ksigma__}, "Solid", "Yellow", "", 1, 0.4 ),
+										Add Ref Line( {__Equivalent1ksigma__,RangeMax}, "Solid", "Green", "", 1, 0.4 )
+									}
+								),
+								Dispatch(
+									{""},
+									"Run Chart",
+									FrameBox,
+									{Frame Size( 845, 278 )}
+								),
+								Dispatch(
+									{""},
+									"Run Chart",
+									FrameBox( 2 ),
+									{Frame Size( 98, 278 )}
+								)
+							)
+						);
+						
+						(CC << report)[ListBox(2)] << Append(
+							V List Box(
+								Outline Box( "Legend",
+									V List Box(
+										Text Box("Blue star: Out of spec"),
+										Text Box( "Alarm 1: 1 point out of 3 k-Sigma" ),
+										Text Box( "Alarm 2: 9 in a row on one side of Median" ),
+										Text Box( "Alarm 5: 2 out of 3 points beyond 2 k-Sigma" )
+									)
+								),
+								Outline Box( "Capability using " || __DistributionChar__,
+									H List Box(
+										String Col Box( "Name",
+											{"%OOS predicted (PPM)", "K-Sigma", "Control Limit", "%OOC",
+											"%OOS Actual"}
+										),
+										Number Col Box( "Value",
+											{NewPPM, Normal Quantile( 1 - 2 * NewPPM / 1000000 ),
+											__Equivalent3ksigma__, POOC, POOS}
+										)
+									)
+								)
+							)
+						)
+					)
+				),
+				Expr(__ColName__), ResponseCol << get name,
+				Expr(__ResponseCol__), ResponseCol,
+				Expr(__Equivalent0ksigma__),Equivalent0ksigma,
+				Expr(__Equivalent1ksigma__),Equivalent1ksigma,
+				Expr(__Equivalent2ksigma__),Equivalent2ksigma,
+				Expr(__Equivalent3ksigma__),Equivalent3ksigma,
+				Expr(__SpecLimit__),SpecLimit,
+				Expr(__Distribution__),parse(Distribution),
+				Expr(__DistributionChar__),Distribution,
+				Expr(__XCol__),if(Is Empty(IDCol),empty(),IDCol),
+				Expr(__Goal__),Goal,
+			)
+		),
+	);
+	Scripts = current data table()<<Get Table Script Names();
+	current data table()<<run script(Scripts[n items(Scripts)]);
+);

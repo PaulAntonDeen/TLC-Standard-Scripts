@@ -1,0 +1,31 @@
+name: Create Archive
+on: [push]
+# on:
+#   release:
+#     types:
+#     - created
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Switch to Release Folder
+      run: |
+        cd Source
+        ls -la
+    - name: Archive Release
+      uses: thedoctor0/zip-release@main
+      with:
+        type: 'zip'
+        directory: 'Source'
+        filename: 'latest.jmpaddin'
+        exclusions: '*.git* /*node_modules/* .editorconfig'
+    - name: push changes to remote
+      run: |
+        mv Source/latest.jmpaddin .
+        git config --global user.name "PaulAntonDeen"
+        git config --global user.email "paulext@gmail.com"
+
+        git add latest.jmpaddin
+        git commit -m "Latest build"
+        git push

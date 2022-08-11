@@ -1,0 +1,156 @@
+/*
+
+GrubbsOutlierTest.jsl
+05Jun2003
+
+Copyright (c) 2003 by SAS Institute Inc., Cary, NC 27513, USA. All rights reserved.
+
+Note: please read the disclaimer at the end of this script.
+
+Purpose
+This script demonstrates a principle.
+
+Author
+Mark Bailey (SAS Institute)
+
+Contact
+mark.bailey@sas.com
+
+Usage
+Simply open a data table and then run this script by any one of these methods:
+
+	Edit > Run Script
+	Control-R
+	Click "Run Script" button in tool bar
+
+Future Improvement Ideas
+None at this time.
+
+*/
+
+Names Default to Here( 1 );
+
+dlg = Column Dialog(
+	yCol = Col List( "Y, Data",
+		Data Type( Numeric ),
+		Min Col(1),
+		Max Col(1)
+	),
+	bCol = Col List( "By",
+		Max Col(1)
+	),
+	Line Up( 2,
+		"Significance", a = Edit Number( 0.05 )
+	),
+	"Select data for outlier test"
+);
+
+If( dlg["Button"] == -1, Throw( "User cancelled" ) );
+Remove From( dlg ); Eval List( dlg );
+
+dt = Current Data Table();
+
+If( N Items( bCol ),
+
+	// process by group
+	dist = dt << Distribution(
+		Y( yCol[1] ),
+		By( bCol[1] ),
+		Normal Quantile Plot( 1 ),
+		Fit Distribution( Normal( Goodness of Fit( 1 ) ) )
+	);
+	distr = dist << Report;
+
+	bCol = Column( bCol[1] );
+	Summarize( group = By( bCol ) );
+
+	yy = yCol[1] << Get As Matrix;
+	exRows = dt << Get Excluded Rows();
+	yy[exRows] = .;
+
+	For( i = 1, i <= N Items( group ), i++,
+		groupName = Trim( Word( 2, distr[i][OutlineBox(1)] << Get Title, "=" ) );
+		getRows = dt << Get Rows Where( bCol[] == groupName );
+		yVal = yy[getRows];
+		yVal[Loc( Is Missing( yVal ) )] = [];
+		n = N Row( yVal );
+
+		t0Sqr = t Quantile( 1 - a/(2*n), n-2 )^2;
+
+		g = Maximum( Abs( yVal - Mean( yVal ) ) ) / Std Dev( yVal );
+		g0 = ((n-1)/Sqrt(n)) * Sqrt( t0Sqr / (n - 2 + t0Sqr) );
+
+		distr[i][Outline Box(2)] << Append(
+			Outline Box( "Grubbs' Outlier Test",
+				Table Box(
+					String Col Box( "Statistic", {"G", "G("||Char(a)||")"} ),
+					Number Col Box( "Estimate", Matrix( {g, g0} ) )
+				),
+				Text Box(
+					If( g>g0,
+						"Outlier detected",
+						"No outlier detected"
+					)
+				)
+			)
+		);
+	),
+	
+	// process as single sample
+	dist = dt << Distribution(
+		Y( yCol[1] ),
+		Normal Quantile Plot( 1 ),
+		Fit Distribution( Normal( Goodness of Fit( 1 ) ) )
+	);
+	distr = dist << Report;
+
+	yVal = yCol[1] << Get As Matrix;
+	exRows = dt << Get Excluded Rows();
+	yval[exRows] = [];
+	n = N Row( yVal );
+
+	t0Sqr =  t Quantile( 1 - a/(2*n), n-2 )^2;
+
+	g = Maximum( Abs( yVal - Mean( yVal ) ) ) / Std Dev( yVal );
+	g0 = ((n-1)/Sqrt(n)) * Sqrt( t0Sqr / (n - 2 + t0Sqr) );
+
+	distr[Outline Box(2)] << Append(
+		Outline Box( "Grubbs' Outlier Test",
+			Table Box(
+				String Col Box( "Statistic", {"G", "G("||Char(a)||")"} ),
+				Number Col Box( "Estimate", Matrix( {g, g0} ) )
+			),
+			Text Box(
+				If( g>g0,
+					"Outlier detected",
+					"No outlier detected"
+				)
+			)
+		)
+	);
+);
+
+/*
+Revision History (date, change, person)
+05Jun2003, created, Mark Bailey
+06Sep2013, correctly disregards excluded rows, Mark Bailey
+03Oct2014, add By groups, Mark Bailey
+*/
+
+/*
+Disclaimer by 
+SAS Institute Inc. 
+
+License Agreement for Corrective Code or 
+Additional Functionality 
+
+SAS INSTITUTE INC. IS PROVIDING YOU WITH THE COMPUTER SOFTWARE CODE INCLUDED WITH THIS AGREEMENT ("CODE") ON AN "AS IS" BASIS, AND AUTHORIZES YOU TO USE THE CODE SUBJECT TO THE TERMS HEREOF.  BY USING THE CODE, YOU AGREE TO THESE TERMS.  YOUR USE OF THE CODE IS AT YOUR OWN RISK.  SAS INSTITUTE INC. MAKES NO REPRESENTATION OR WARRANTY, EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NONINFRINGEMENT AND TITLE, WITH RESPECT TO THE CODE. 
+
+The Code is intended to be used solely as part of a product ("Software") you currently have licensed from SAS or one of its subsidiaries or authorized agents ("SAS"). The Code is designed to either correct an error in the Software or to add functionality to the Software, but has not necessarily been tested.  Accordingly, SAS makes no representation or warranty that the Code will operate error-free.  SAS is under no obligation to maintain or support the Code.
+
+Neither SAS nor its licensors shall be liable to you or any third party for any general, special, direct, indirect, consequential, incidental or other damages whatsoever arising out of or related to your use or inability to use the Code, even if SAS has been advised of the possibility of such damages.
+
+Except as otherwise provided above, the Code is governed by the same agreement that governs the Software.  If you do not have an existing agreement with SAS governing the Software, you may not use the Code. 
+
+(SAS and all other SAS Institute Inc. product or service names are registered trademarks or trademarks of SAS Institute Inc. in the USA and other countries. ® indicates USA registration. Other brand and product names are registered trademarks or trademarks of their respective companies.)
+*/

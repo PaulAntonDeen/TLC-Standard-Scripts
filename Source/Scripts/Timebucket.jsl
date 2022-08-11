@@ -1,0 +1,54 @@
+//
+// Time Bucket16/5/12 by M Trigg
+// Improved by Paul Deen 2015-07-24
+//
+//Clear Globals();
+//Open data table and assign it to dt variable
+activetable1 = N Rows();
+dt = If( activetable1 > 0,
+	Current Data Table(),
+	Open()
+);
+// Get the data requirements from the user
+VarColumnDialog = Column Dialog(
+	ColDateTime = Col List( "Date time column", Min Col( 1 ), Max Col( 1 ), Data Type( Numeric ), ),
+	Vlist( "Put time values from a column in a time bucket column" ),
+	Vlist( "" ),
+	Vlist( "Define Bucket size." ),
+	Hlist( "Hours     (0-...)   ", varHours = edit number( 0 ) ),
+	Hlist( "Minutes (0-59)  ", varMinutes = edit number( 0 ) ),
+	Hlist( "Seconds (0-59)  ", varSeconds = edit number( 0 ) ),
+	Vlist( "" ),
+	Vlist( "Time offset is added to the time before it is divided and placed into buckets." ),
+	Vlist( "To shift left enter a negative number." ),
+	Hlist( "Time offset (in seconds - 0-...)", varOffset = edit number( 0 ) ),
+);
+
+// make in to accessable variables
+ColDateTime = Eval( VarColumnDialog[1] )[1];
+varHours = Eval( VarColumnDialog[2] );
+varMinutes = Eval( VarColumnDialog[3] );
+varSeconds = Eval( VarColumnDialog[4] );
+varOffset = Eval( VarColumnDialog[5] );
+
+// check entries are valid
+chk = varHours + varMinutes + varOffset;
+Try(
+	If( varMinutes > 59, chk = 0 );
+	If( varMinutes < 0, chk = 0 );
+	If( varHours < 0, chk = 0 );
+	If( varSeconds < 0, chk = 0 );
+	If( varOffset < 0, chk = 0 );
+	If( chk == 0,
+		Throw( "Input Error!" )
+	);
+);
+Caption( "Script running ... Please Wait!!" );
+varBucketSize = (varHours * 3600) + (varMinutes * 60) + (varSeconds);
+colTB = dt << New Column( "Time Bucket", numeric );
+	
+eval(eval expr(colTB << set formula( expr(name expr(ColDateTime)) + expr(varOffset) - modulo( expr(name expr(ColDateTime)) + expr(varOffset), expr(varBucketSize)))));
+
+blub = ColDateTime << Get Format();
+eval(eval expr(expr(colTB) << expr(name expr(blub))));
+Caption( remove );

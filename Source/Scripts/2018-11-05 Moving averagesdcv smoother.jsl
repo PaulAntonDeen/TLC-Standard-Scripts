@@ -1,0 +1,133 @@
+﻿Names Default To Here( 1 );
+If( !Namespace Exists( "MovingAverageSmoother" ),nsref = New Namespace("MovingAverageSmoother"));
+
+//Check for an active table, if not present open dialog.
+dt = If( N Rows() > 0,
+	dt = Current Data Table(),
+	dt = Open()
+);
+
+stop_flag = 0;
+
+Recall = expr(
+	Try(
+		SourceBox << Clear selection();
+		SourceBox << set selected( MovingAverageSmoother:YColRecall );
+		SmoothWindowBox << Set( MovingAverageSmoother:SmoothRecall );
+	);
+);
+
+Validate = function({},
+	SetReturn=1;
+	If(or(is missing(SmoothWindowBox << get()),(SmoothWindowBox << get()) <= 0),
+		new window("Error", << modal, text box("Please specify a Smooth window"));
+		SetReturn=0;
+	);
+	If( n items(SourceBox << get selected())!=1,
+		new window("Error", << modal, text box("You must select 1 column to smooth"));
+		SetReturn=0;
+	);
+	If( (column((SourceBox << get selected())[1]) << Get Data Type()) != "Numeric",
+		new window("Error", << modal, text box("Please select a numeric column to smooth"));
+		SetReturn=0;
+	);
+	Return(SetReturn)
+);
+
+//Launch dialog
+diadata = New Window( "Create Non-Normal control chart",
+	<<Modal,
+	<<on validate(Validate),
+	Border Box( Left( 3 ), top( 2 ),
+		H List Box(
+			Panel Box( "Select column to smooth ",
+				V List Box(
+					SourceBox = Col List Box( All, nLines( 5 ), MaxSelected(1) ),
+				)
+			),
+			Panel box("Smooth window",
+				V List Box(
+					Text Box("How many points to smooth?"),
+					SmoothWindowBox = Number Edit Box( 3 )
+				)
+			),
+			Panel Box( "Actions",
+				Lineup Box( N Col( 1 ),
+					Button Box( "OK",
+						ColName = (SourceBox << Get selected())[1];
+						MovingAverageSmoother:YColRecall = SourceBox << get selected();
+						Try(MovingAverageSmoother:SmoothRecall = SmoothWindow = floor(SmoothWindowBox << Get));
+					),
+					Button Box( "Recall", Recall ),
+					Button Box( "Cancel", stop_flag++ ),
+				)
+			)
+		),
+	)
+);
+
+If( stop_flag,
+	Print( "User hit cancel" );
+	Stop();
+);
+
+//stop();
+dt<<Set Table Variable("Smooth Window " || ColName, SmoothWindow);
+
+//Add columns with formula's
+MoAvCol=New Column( "Moving Average " || ColName,
+	Numeric,
+	Continous,
+);
+
+Eval(
+	Substitute(
+			Expr(
+				MoAvCol << Formula(
+					If(
+						Is Missing( _Col_ ), Empty(),
+						Row() < _SMW_, Summation( i = 1, Row(), _Col_[i] ) / Row(),
+						Summation( i = (Row() - _SMW_) + 1, Row(), _Col_[i] ) /
+						_SMW_
+					)
+				)
+			),
+		Expr( _SMW_ ), parse(":Name( \!"Smooth Window " || ColName || "\!")"),
+		Expr( _Col_ ), parse(":Name( \!"" || ColName || "\!")")
+	)
+);
+
+MVColName = MoAvCol << get name();
+
+MoSDCol=New Column( "Moving Stdev " || ColName,
+	Numeric,
+	Continous,
+);
+
+Eval(
+	Substitute(
+			Expr(
+				MoSDCol << Formula(
+					If(
+						Is Missing( _Col_ ), Empty(),
+						Row() == 1, Empty(),
+						Row() < _SMW_,
+							Root(
+								Summation( i = 1, Row(), (_Col_[i] - _MVCol_[i]) ^ 2 ) / (
+								Row() - 1)
+							),
+						Root(
+							Summation(
+								i = (Row() - _SMW_) + 1,
+								Row(),
+								(_Col_[i] - _MVCol_[i]) ^ 2
+							) / (_SMW_ - 1)
+						)
+					)
+				)
+			),
+		Expr( _SMW_ ), Parse(":Name( \!"Smooth Window " || ColName || "\!")"),
+		Expr( _Col_ ), Parse(":Name( \!"" || ColName || "\!")"),
+		Expr( _MVCol_ ), Parse(":Name( \!"" || MVColName || "\!")")
+	)
+);
