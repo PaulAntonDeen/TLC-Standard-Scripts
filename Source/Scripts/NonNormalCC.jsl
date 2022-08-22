@@ -118,6 +118,7 @@ diadata = New Window( "Create Non-Normal control chart",
 							NonNormalControlChart:GoalRecall = GoalCB << Get();
 							Distribution = RBModel << Get Selected();
 							NonNormalControlChart:ModelRecall = RBModel << Get();
+							current window() << close window(1);
 							Body;
 						),
 						Button Box( "Remove",
@@ -125,7 +126,7 @@ diadata = New Window( "Create Non-Normal control chart",
 							XDestinationBox << RemoveSelected;
 						),
 						Button Box( "Recall", Recall ),
-						Button Box( "Cancel", stop_flag++ ),
+						Button Box( "Cancel", current window() << close window(1); )
 					)
 				)
 			)
