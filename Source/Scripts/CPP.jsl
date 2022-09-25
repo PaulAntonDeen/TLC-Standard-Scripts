@@ -1,3 +1,5 @@
+StartingWindow = current window() << get window title;
+
 WindowSelectionDialog = new window("Critical Process Parameters",
 	Border Box( Left( 15), top( 10 ), bottom( 10 ), right(15),
 		v list box(
@@ -26,7 +28,8 @@ WindowSelectionDialog = new window("Critical Process Parameters",
 			panel box("",
 				lineup box(ncol(2),
 					Text box("1. Select the fit model report window:\!n\!nWarning: do not use factor names that contain a '*' \!nthe multiplier will be wrong."),
-					Panel box("List of open windows",wlb = list box(get window list() << Get Window Title())),
+					Panel box("List of open windows",wlb = list box(get window list() << Get Window Title(), width(750))),
+					try(wlb << Set Selected(Loc(get window list() << Get Window Title(), StartingWindow), 1));
 					Text box(""),
 					Text box(""),
 					Text box("2. Click 'Open tables', fill the limits and come back here"),

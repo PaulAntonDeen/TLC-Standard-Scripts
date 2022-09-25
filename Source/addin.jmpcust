@@ -14,7 +14,7 @@
             <jm:action type="path">$ADDIN_HOME(com.tlc.standardscripts)\Scripts\POV MSA.jsl</jm:action>
             <jm:accel>Ctrl+Alt+Shift+P</jm:accel>
             <jm:tip>Partition of variation and measurement systems analysis</jm:tip>
-            <jm:icon type="builtin">RowState</jm:icon>
+            <jm:icon type="builtin">Variability</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>CRITICAL PROCESS PARAMETERS</jm:name>
