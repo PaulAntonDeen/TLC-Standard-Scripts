@@ -74,4 +74,4 @@ zipFolder = Function( {folderToZip, zipFileLoc, overwriteFile = 0, recursive = 1
 );
 zipFolder(AddinSource, FileName, 1, 1); //Build the addin with arguments {Source folder, Destination folder and filename, overwrite addin, recurse in source folder}
 
-//open(FileName); //Install the addin after building it
+open(FileName); //Install the addin after building it
