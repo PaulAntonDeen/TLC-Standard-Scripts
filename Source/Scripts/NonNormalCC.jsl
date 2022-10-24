@@ -36,10 +36,10 @@ Validate = function({},
 
 SetModel = expr(
 	If( GoalCB << get()==1,
-		RBModel << Set Items( {"Shash", "Gamma", "Weibull", "Exponential", "LogNormal", "Glog"} );
+		RBModel << Set Items( {"Gamma", "Weibull", "Exponential", "LogNormal", "Glog"} );
 		SpecTbox << set text("USL");
 	,
-		RBModel << set items( {"Shash", "Gamma", "Weibull", "LogNormal", "Glog"} );
+		RBModel << set items( {"Gamma", "Weibull", "LogNormal", "Glog"} );
 		SpecTbox << set text("LSL");
 	);
 	try(getLimit(YDestinationBox << Get Items(),GoalCB << Get Selected));
