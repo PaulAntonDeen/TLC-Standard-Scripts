@@ -80,38 +80,34 @@
           <jm:command>
             <jm:name>DEFAULT JMP PREFERENCES</jm:name>
             <jm:caption>Default JMP preferences</jm:caption>
-            <jm:action type="text">If(Host is(windows),	Match(		word(1,JMP Version(),&quot;.&quot;)		,&quot;17&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v17.jsl&quot;)		,&quot;16&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v16.jsl&quot;)		,&quot;15&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v15.jsl&quot;)		,&quot;14&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v14.jsl&quot;)		,&quot;13&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v13.jsl&quot;)		,new window(&lt;&lt;modal,&quot;Version error&quot;,Text box(&quot;JMP for windows version &quot; || jmp version() || &quot; unknown, please update addin.&quot;))	)	,	Match(		word(1,JMP Version(),&quot;.&quot;)		,&quot;17&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v17.jsl&quot;)		,&quot;16&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v16.jsl&quot;)		,&quot;15&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v15.jsl&quot;)		,&quot;14&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v14.jsl&quot;)		,&quot;13&quot;,include(&quot;$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v13.jsl&quot;)		,new window(&lt;&lt;modal,&quot;Version error&quot;,Text box(&quot;JMP for OSX version &quot; || jmp version() || &quot; unknown, please update addin.&quot;))	));</jm:action>
+            <jm:action type="text">If(Host is(windows),
+	Match(
+		word(1,JMP Version(),".")
+		,"17",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v17.jsl")
+		,"16",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v16.jsl")
+		,"15",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v15.jsl")
+		,"14",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v14.jsl")
+		,"13",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v13.jsl")
+		,new window(&lt;&lt;modal,"Version error",Text box("JMP for windows version " || jmp version() || " unknown, please update addin."))
+	)
+	,
+	Match(
+		word(1,JMP Version(),".")
+		,"17",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v17.jsl")
+		,"16",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v16.jsl")
+		,"15",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v15.jsl")
+		,"14",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v14.jsl")
+		,"13",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v13.jsl")
+		,new window(&lt;&lt;modal,"Version error",Text box("JMP for OSX version " || jmp version() || " unknown, please update addin."))
+	)
+);</jm:action>
             <jm:tip>Standard preferences</jm:tip>
             <jm:icon type="builtin">ScriptingIndexAll</jm:icon>
           </jm:command>
           <jm:command>
             <jm:name>CHECK FOR UPDATE</jm:name>
             <jm:caption>Check for update</jm:caption>
-            <jm:action type="text">CheckUpdate = Function({AddinID, Repo}, {Default Local},
-	AvailableVersion = Try(
-		Parse(Load Text File(Repo || "version.txt")),
-		New window("Error",&lt;&lt;modal,Text Box("Could not find file version file"));
-		Stop();
-	);
-	CurrentVersion = Get Addin(AddinID) &lt;&lt; version;
-	If(AvailableVersion &gt; CurrentVersion,
-		Write("Updating " || AddinID || " from " || char(CurrentVersion) || " to " || char(AvailableVersion));
-		Save Text File(
-			"$TEMP/latest.jmpaddin",
-			Try(
-				Load Text File(Repo || "latest.jmpaddin", blob),
-				New window("Error",&lt;&lt;modal,Text Box("Could not find file .jmpaddin file"));
-				Stop();
-			);
-		);
-		Try(Open("$TEMP/latest.jmpaddin"));
-		Try(Delete file("$TEMP/latest.jmpaddin"));
-		New window("Result",&lt;&lt;modal,Text Box(AddinID || " version " || char(Get Addin(AddinID) &lt;&lt; version) || " now installed"));
-	,
-		New window("Result",&lt;&lt;modal,Text Box(char(CurrentVersion) || " is the newest version of " || AddinID));
-	);
-);
-CheckUpdate("com.tlc.standardscripts", "https://raw.githubusercontent.com/PaulAntonDeen/TLC-Standard-Scripts/main/");</jm:action>
+            <jm:action type="text">CheckUpdate = Function({AddinID, Repo}, {Default Local},	AvailableVersion = Try(		Parse(Load Text File(Repo || &quot;version.txt&quot;)),		New window(&quot;Error&quot;,&lt;&lt;modal,Text Box(&quot;Could not find version file, contact add-in creator&quot;));		Stop();	);	CurrentVersion = Get Addin(AddinID) &lt;&lt; version;	If(AvailableVersion &gt; CurrentVersion,		Write(&quot;Updating &quot; || AddinID || &quot; from &quot; || char(CurrentVersion) || &quot; to &quot; || char(AvailableVersion));		Try(Delete file(&quot;$TEMP/latest.jmpaddin&quot;));		Save Text File(			&quot;$TEMP/latest.jmpaddin&quot;,			Try(				Load Text File(Repo || &quot;latest.jmpaddin&quot;, blob),				New window(&quot;Error&quot;,&lt;&lt;modal,Text Box(&quot;Could not find latest.jmpaddin&quot;));				Stop();			);		);		Try(Open(&quot;$TEMP/latest.jmpaddin&quot;));		Try(Delete file(&quot;$TEMP/latest.jmpaddin&quot;));		New window(&quot;Result&quot;,&lt;&lt;modal,Text Box(AddinID || &quot; version &quot; || char(Get Addin(AddinID) &lt;&lt; version) || &quot; now installed. This is the latest version.&quot;));	,		New window(&quot;Result&quot;,&lt;&lt;modal,Text Box(char(CurrentVersion) || &quot; is the newest version of &quot; || AddinID));	););CheckUpdate(&quot;com.tlc.standardscripts&quot;, &quot;https://raw.githubusercontent.com/PaulAntonDeen/TLC-Standard-Scripts/main/&quot;);</jm:action>
             <jm:tip>Checks and installs the latest version of this Add-in</jm:tip>
             <jm:icon type="builtin">Refresh</jm:icon>
           </jm:command>

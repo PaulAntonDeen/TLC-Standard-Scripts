@@ -1,6 +1,7 @@
 Names default to here(1);
 //List of parameters to change
-FileName = "./Releases/" || Format( Today(), "Format Pattern", "<YYYY>-<MM>-<DD> <hh24>_<mm>_<ss>") || " TLC standard scripts.jmpaddin";
+TimeStamp = today();
+FileName = "./Releases/" || Format( TimeStamp, "Format Pattern", "<YYYY>-<MM>-<DD> <hh24>_<mm>") || " (" || Format( TimeStamp, "Format Pattern", "<MM><DD><YYYY>") || ") TLC standard scripts.jmpaddin";
 AddinID = "com.tlc.standardscripts";
 PathToAddindef = "./Source/addin.def";
 AddinSource = "./Source/";
@@ -9,7 +10,7 @@ AddinSource = "./Source/";
 SourceDef = Load Text File(PathToAddindef);
 FirstPart = Left(SourceDef, contains(SourceDef, "addinVersion")+12);
 LastPart = SubStr(SourceDef, contains(SourceDef, "minJmpVersion"));
-datetext = Format( Today(), "Format Pattern", "<YY><MM><DD><hh24><mm>"); //Place today's date in YYMMDD format
+datetext = Format( TimeStamp, "Format Pattern", "<YY><MM><DD><hh24><mm>"); //Place today's date in YYMMDD format
 Save text file(PathToAddindef, FirstPart || datetext || "\!n" || LastPart); //Write back to addin.def
 Save text file("version.txt", datetext);
 
@@ -73,5 +74,7 @@ zipFolder = Function( {folderToZip, zipFileLoc, overwriteFile = 0, recursive = 1
 	Return( 1 );
 );
 zipFolder(AddinSource, FileName, 1, 1); //Build the addin with arguments {Source folder, Destination folder and filename, overwrite addin, recurse in source folder}
+delete file("latest.jmpaddin");
+Copy File(FileName, "latest.jmpaddin");
 
 open(FileName); //Install the addin after building it
