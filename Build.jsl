@@ -1,7 +1,8 @@
 Names default to here(1);
 //List of parameters to change
 TimeStamp = today();
-FileName = "./Releases/" || Format( TimeStamp, "Format Pattern", "<YYYY>-<MM>-<DD> <hh24>_<mm>") || " (" || Format( TimeStamp, "Format Pattern", "<MM><DD><YYYY>") || ") TLC standard scripts.jmpaddin";
+FileName = "./Releases/" || regex(format(Today(), "Monddyyyy h:m:s", 22, 0 ),"[-:]",".",GLOBALREPLACE) || " TLC standard scripts.jmpaddin";
+
 AddinID = "com.tlc.standardscripts";
 PathToAddindef = "./Source/addin.def";
 AddinSource = "./Source/";
