@@ -18,7 +18,7 @@ try(
 		Excel modeling menus( 0 ),
 		Auto Hide Menus( "Never" ),
 		Save Image DPI( 300 ),
-		Enable Hardware Accelerated Graphics( 1 ),
+		//Enable Hardware Accelerated Graphics( 1 ),
 //		Annotate error lines in log( 1 ),
 		Save Journals GZ Compressed( 1 ),
 		Save Data Table Columns GZ Compressed( 1 ),
