@@ -83,21 +83,19 @@
             <jm:action type="text">If(Host is(windows),
 	Match(
 		word(1,JMP Version(),".")
+		,"18",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v18.jsl")
 		,"17",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v17.jsl")
 		,"16",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v16.jsl")
 		,"15",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v15.jsl")
-		,"14",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v14.jsl")
-		,"13",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Win Set preferences v13.jsl")
 		,new window(&lt;&lt;modal,"Version error",Text box("JMP for windows version " || jmp version() || " unknown, please update addin."))
 	)
 	,
 	Match(
 		word(1,JMP Version(),".")
+		,"18",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v18.jsl")
 		,"17",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v17.jsl")
 		,"16",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v16.jsl")
 		,"15",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v15.jsl")
-		,"14",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v14.jsl")
-		,"13",include("$ADDIN_HOME(com.tlc.standardscripts)/Preferences/Mac Set preferences v13.jsl")
 		,new window(&lt;&lt;modal,"Version error",Text box("JMP for OSX version " || jmp version() || " unknown, please update addin."))
 	)
 );</jm:action>
