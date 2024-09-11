@@ -197,7 +197,7 @@ if(Host is(windows),
           <jm:command>
             <jm:name>MTBF TEST SAMPLE SIZE</jm:name>
             <jm:caption>MTBF Test Sample Size</jm:caption>
-            <jm:action type="text">Open("$ADDIN_HOME(com.asm.standardscripts)/Extra files/MTBF Test Sample Size.jmp")</jm:action>
+            <jm:action type="text">Open("$ADDIN_HOME(com.tlc.standardscripts)/Extra files/MTBF Test Sample Size.jmp")</jm:action>
             <jm:tip>Calculate test time to prove MTBF</jm:tip>
             <jm:icon type="none"></jm:icon>
           </jm:command>
