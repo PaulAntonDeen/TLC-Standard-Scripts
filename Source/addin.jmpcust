@@ -111,6 +111,29 @@
         <jm:menu>
           <jm:name>FILES</jm:name>
           <jm:caption>Files</jm:caption>
+		  <jm:command>
+            <jm:name>ANALYTICAL TARGET PROFILE</jm:name>
+            <jm:caption>Analytical Target Profile</jm:caption>
+            <jm:action type="text">FileName = "Analytical Target Profile.xlsx";
+AddinSourceLocation = "$ADDIN_HOME(com.tlc.standardscripts)/Worksheets/";
+
+if(Host is(windows),
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,windows);
+	RunProgram(
+		Executable( "CMD.EXE" ),
+		Options( {"/c start \!"\!" \!"" || filepath || "\!""} ) // - /c start "" "/local/file/path"
+	)
+,
+	filepath = convert file path(AddinSourceLocation||FileName,absolute,posix);
+	RunProgram(
+		Executable( "/usr/bin/open" ),
+		Options( filepath ),
+		ReadFunction( "text" )
+	)
+);
+</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
           <jm:command>
             <jm:name>CAPABILITY QUANTILES COMPARISON WITH TI AND RISK</jm:name>
             <jm:caption>Capability Quantiles Comparison with TI and Risk</jm:caption>
