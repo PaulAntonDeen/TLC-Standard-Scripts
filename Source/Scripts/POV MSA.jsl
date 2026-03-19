@@ -325,6 +325,11 @@ POVFun = Function(
 	ResponseVariance = ResponseSD ^ 2 * (ReponseN - 1) / ReponseN;
 	
 	//Create Variability Charts and append to VB list for Journal
+	Platform Preferences(
+		Variability Analysis(
+			Show Group Means( 0 )
+		)
+	);
 	eval(
 		Substitute(
 				Expr(
