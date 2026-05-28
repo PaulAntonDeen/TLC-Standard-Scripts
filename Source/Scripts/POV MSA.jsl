@@ -277,7 +277,7 @@ diadata = New Window( "POV and MSA engine",
 							),
 							Spacer Box( size( 60, 112 ) ),
 							Panel Box( "Instructions",
-								Text Box( "Input the sample/part column to get a Gage RnR report", <<Bullet Point( 1 ), <<set wrap( 400 ) ),
+								Text Box( "Input the sample/part column to get a Gauge RnR report", <<Bullet Point( 1 ), <<set wrap( 400 ) ),
 								Text Box(
 									"Entering a Historical Sigma will calculate a corrected sigma",
 									<<Bullet Point( 1 ),
@@ -555,7 +555,19 @@ POVFun = Function(
 GRnRFun = Function(
 	{VB, BetweenLabels, WithinLabels, BetweenVariances, TotalWithinVariance, ResponseMean, ReponseN, PartCol, Goal, HisSigma, ToleranceWindow, By, dt, dplaces},
 	{default local}, 
-	
+	/*
+	VB = POVResults[1];
+	BetweenLabels = POVResults[2];
+	WithinLabels = POVResults[3];
+	BetweenVariances = POVResults[4];
+	TotalWithinVariance = POVResults[5];
+	ResponseMean = POVResults[6];
+	ReponseN = POVResults[7];
+	PartCol = PartCol[1];
+	dt = dtBy[ByInt];
+	dplaces = POVResults[9];
+	*/
+
 	//Create the labels for the GRnR table
 	position = 0;
 	For(i=1, i<= n items(BetweenLabels), i++,
@@ -704,7 +716,7 @@ GRnRFun = Function(
 	);
 
 	//Create the precision to tolerance table
-	obGRnR = Outline Box( "Gage Repeatability and Reproducibility",
+	obGRnR = Outline Box( "Gauge Repeatability and Reproducibility",
 		H list box(
 			V List Box(
 				Outline Box( "Results", tbxGRnR ),
@@ -931,8 +943,8 @@ MSAFun = function({
 	);
 	Column( 1 )[1] = "Overall";
 	Column( 2 )[1] = OveralBias;
-	Column( 3 )[1] = UpperOveralBias;
-	Column( 4 )[1] = LowerOveralBias;
+	Column( 3 )[1] = LowerOveralBias;
+	Column( 4 )[1] = UpperOveralBias;
 	Wait( 0.1 );
 	
 	//Append Bias tables to report
@@ -1221,10 +1233,10 @@ MSAFun = function({
 					Formula(
 						If( :Name( "Corrected Measurement Error % of tolerance" ) >= 0.2,
 							">=20% Not acceptable",
-							"<20% Aceptable if Corrected"
+							"<20% Acceptable if Corrected"
 						)
 					),
-					Set Property( "Value Colors", {"<20% Aceptable if Corrected" = 76, ">=20% Not acceptable" = 67} ),
+					Set Property( "Value Colors", {"<20% Acceptable if Corrected" = 76, ">=20% Not acceptable" = 67} ),
 					Color Cell by Value
 				);,
 			And( Or( Goal == 3, Goal == 4 ), !Is Missing( ToleranceWindow ) ),
@@ -1580,7 +1592,7 @@ If( diadata["Button"] > 0,
 					ToleranceWindow,
 					By,
 					dtBy[ByInt],
-					POVResults[8]
+					POVResults[9]
 				)
 				
 			,
